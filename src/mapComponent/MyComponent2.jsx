@@ -1,4 +1,4 @@
-import { GoogleApiWrapper, Map, Marker } from "google-maps-react";
+import { GoogleApiWrapper, InfoWindow, Map, Marker } from "google-maps-react";
 import { Country, State, City } from 'country-state-city';
 import { useEffect, useMemo, useRef, useState } from "react";
 import '../App.css'
@@ -19,7 +19,9 @@ const TiltAngleArray = [
     51, 52, 53, 54, 55, 56, 57, 58, 59, 60
 ]
 
+
 const MyComponent2 = () => {
+
 
     const [markers, setMarkers] = useState([])
     const [zoom, setZoom] = useState(0.1)
@@ -28,7 +30,9 @@ const MyComponent2 = () => {
     const [projectCountContainer, setProjectCountContainer] = useState(false)
     const [openProjectData, setOpenProjectData] = useState(null)
     const [projects, setProjects] = useState([])
+    const [finalProjectLocation, setFinalProjectLocation] = useState([])
     const [openForm, setOpenForm] = useState(false)
+    const [loading, setLoading] = useState(true)
     const [openDefaulData, setOpenDefaultData] = useState({
         city: false,
         moduleCapacity: false
@@ -37,7 +41,7 @@ const MyComponent2 = () => {
         country: null,
         state: null,
         city: null,
-        projectCapacityIn: "KWP",
+        projectCapacityIn: "KWp",
         projectCapacity: null,
         moduleType: null,
         moduleCapacity: null,
@@ -76,8 +80,10 @@ const MyComponent2 = () => {
     }
     const handleexistMarkerClick = (e) => {
         setCenter({ lat: e?.Latitude, lng: e?.Longitude })
-        setOpenData(true)
-        setOpenProjectData(e)
+        if (zoom >= 11) {
+            setOpenData(true)
+            setOpenProjectData(e)
+        }
         if (zoom < 13) {
             setZoom((v) => v + 2)
         }
@@ -96,17 +102,109 @@ const MyComponent2 = () => {
     }
     const getAllProjects = async () => {
         try {
+            setLoading(true)
             const { data } = await axios.get("/pvfleet/all-project")
             if (data) {
-                console.log("here data is ", data)
                 setProjects([...projects, ...data?.result])
+                setFinalProjectLocation([...finalProjectLocation, ...data?.result])
             }
         } catch (error) {
             console.log("error is ", error.message)
             alert("Error is ", error.message)
 
+        } finally {
+            setLoading(false)
         }
     }
+
+    useMemo(() => {
+        if (projects.length > 0 && finalProjectLocation?.length > 0) {
+
+            if (zoom < 4) {
+
+                let obj = []
+                finalProjectLocation?.map((e, inde) => {
+                    let elem = obj.findIndex((ee, i) => {
+                        return ee["Country"] === e.Country
+                    })
+                    if (elem >= 0) {
+                        let test = { ...obj[elem] }
+                        test["projectCount"] = obj[elem]["projectCount"] + 1
+                        obj.splice(elem, 1, test)
+
+                    } else {
+                        let country = CountryAndState.find(ee => ee.name === e.Country)
+                        let test = {
+                            Country: country?.name,
+                            Latitude: country?.latitude,
+                            Longitude: country?.longitude
+                        }
+                        test["projectCount"] = 1;
+                        obj.push(test)
+                    }
+                })
+                setProjects(obj)
+            } else if (zoom < 7) {
+                let obj2 = []
+                finalProjectLocation?.map((e, inde) => {
+                    let state = e.StateOrRegion?.split(",")[0]
+                    let elem = obj2.findIndex((ee, i) => {
+                        return ee["name"]?.split(",")[0] === state
+                    })
+
+                    if (elem >= 0) {
+                        let test = { ...obj2[elem] };
+                        test["projectCount"] = obj2[elem]["projectCount"] + 1
+                        obj2.splice(elem, 1, test)
+
+                    } else {
+                        let country = CountryAndState.find(ee => ee.name === e.Country)
+                        let result = State.getStatesOfCountry(country.isoCode)?.find(ee => ee.name === state)
+                        let test = {
+                            name: result?.name,
+                            Latitude: result?.latitude,
+                            Longitude: result?.longitude
+                        }
+                        test["projectCount"] = 1;
+                        obj2.push(test)
+                    }
+                })
+
+                setProjects(obj2)
+            } else if (zoom < 11) {
+
+                let obj3 = []
+                finalProjectLocation?.map((e, inde) => {
+                    let state = e.StateOrRegion?.split(",")[0]
+                    let city = e.StateOrRegion?.split(",")[1].trim()
+                    let elem = obj3.findIndex((ee, i) => {
+                        return ee["name"]?.split(",")[0] === city
+                    })
+                    if (elem >= 0) {
+                        let test = { ...obj3[elem] };
+                        test["projectCount"] = obj3[elem]["projectCount"] + 1
+                        obj3.splice(elem, 1, test)
+
+                    } else {
+                        let country = CountryAndState.find(ee => ee.name === e.Country)
+                        let result = State.getStatesOfCountry(country?.isoCode)?.find(ee => ee.name === state)
+                        let result2 = City.getCitiesOfState(country.isoCode, result.isoCode)?.find(eee => eee.name === city)
+                        let test = {
+                            name: result2?.name,
+                            Latitude: result2?.latitude,
+                            Longitude: result2?.longitude
+                        }
+                        test["projectCount"] = 1;
+                        obj3.push(test)
+                    }
+                })
+                setProjects(obj3)
+            } else {
+                setProjects(finalProjectLocation)
+            }
+        }
+    }, [loading, zoom])
+
 
     const registerProject = async (Pdata, phoneNumberCode, location) => {
         try {
@@ -131,23 +229,23 @@ const MyComponent2 = () => {
             )
             if (data) {
                 setOpenForm(false)
-                setProjectData({
-                    ...ProjectData,
-                    country: null,
-                    state: null,
-                    city: null,
-                    projectCapacityIn: "KWP",
-                    projectCapacity: null,
-                    moduleType: null,
-                    moduleCapacity: null,
-                    inverterType: null,
-                    structureType: null,
-                    tileAngle: null,
-                    irradiation: null,
-                    plantGeneration: null,
-                    emailID: null,
-                    phoneNumber: null,
-                })
+                // setProjectData({
+                //     ...ProjectData,
+                //     country: null,
+                //     state: null,
+                //     city: null,
+                //     projectCapacityIn: "KWp",
+                //     projectCapacity: null,
+                //     moduleType: null,
+                //     moduleCapacity: null,
+                //     inverterType: null,
+                //     structureType: null,
+                //     tileAngle: null,
+                //     irradiation: null,
+                //     plantGeneration: null,
+                //     emailID: null,
+                //     phoneNumber: null,
+                // })
                 getAllProjects()
                 setMarkers([])
             }
@@ -156,9 +254,7 @@ const MyComponent2 = () => {
             console.log("Error is ", error.message)
         }
     }
-
     useEffect(() => {
-
         getAllProjects()
     }, [])
 
@@ -301,7 +397,7 @@ const MyComponent2 = () => {
                             {
                                 openDefaulData.city &&
                                 <input type="text" id="city"
-                                    value={locationDetail.cityName}
+                                    value={ProjectData.city}
                                     onChange={(e) => setProjectData({ ...ProjectData, city: e.target.value })}
                                     required
                                 />
@@ -374,9 +470,9 @@ const MyComponent2 = () => {
                                     }}
                                     required
                                 >
-                                    <option value="KWP">KWp</option>
-                                    <option value="MWP">MWp</option>
-                                    <option value="GWP">GWp</option>
+                                    <option value="KWp">KWp</option>
+                                    <option value="MWp">MWp</option>
+                                    <option value="GWp">GWp</option>
                                 </select>
                             </div>
                         </div>
@@ -596,231 +692,247 @@ const MyComponent2 = () => {
                             </div>
                         </div>
                         <div>
+                            {/* <div><span>Please Wait </span><span>&nbsp;.</span><span>&nbsp;.</span><span>&nbsp;.</span></div> */}
+
                             <input type="submit" value="Submit" />
                         </div>
                     </form>
                 </div>
             </div>
-            <div className="heading-container">
-                <h3>!! Welcome TO pvFLEET Performance Dashboard !! </h3>
-                <h3>GreenEnco Limited (UK)</h3>
-            </div>
-            <div className="main-container">
-                <div>
-                    <div>
-                        <span>Project Locations</span>
-                        <svg style={{ rotate: "-45deg", position: "relative", top: "3px" }} height={"20px"} width={"20px"} fill="red" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M25.497 6.503l.001-.003-.004.005L3.5 15.901l11.112 1.489 1.487 11.11 9.396-21.992.005-.006z"></path></g></svg>
-                        {/* <svg height={"30px"} fill="green" width={"30px"}> */}
-                        {/* <path d='M12.75 0l-2.25 2.25 2.25 2.25-5.25 6h-5.25l4.125 4.125-6.375 8.452v0.923h0.923l8.452-6.375 4.125 4.125v-5.25l6-5.25 2.25 2.25 2.25-2.25-11.25-11.25zM10.5 12.75l-1.5-1.5 5.25-5.25 1.5 1.5-5.25 5.25z'>
+            {
+                loading ?
+                    <div
+                        style={{
+                            textAlign: "center",
+                            height: "100vh",
+                            width: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "white",
+                            fontSize: "5vmin"
+                        }}>
+                        Please Wait . . .
+                    </div> :
+                    <>
+                        <div className="heading-container">
+                            <h3>!! Welcome TO pvFLEET Performance Dashboard !! </h3>
+                            <h3>GreenEnco Limited (UK)</h3>
+                        </div>
+                        <div className="main-container">
+                            <div>
+                                <div>
+                                    <span>Project Locations</span>
+                                    <svg style={{ rotate: "-45deg", position: "relative", top: "3px" }} height={"20px"} width={"20px"} fill="red" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M25.497 6.503l.001-.003-.004.005L3.5 15.901l11.112 1.489 1.487 11.11 9.396-21.992.005-.006z"></path></g></svg>
+                                    {/* <svg height={"30px"} fill="green" width={"30px"}> */}
+                                    {/* <path d='M12.75 0l-2.25 2.25 2.25 2.25-5.25 6h-5.25l4.125 4.125-6.375 8.452v0.923h0.923l8.452-6.375 4.125 4.125v-5.25l6-5.25 2.25 2.25 2.25-2.25-11.25-11.25zM10.5 12.75l-1.5-1.5 5.25-5.25 1.5 1.5-5.25 5.25z'>
                     </path> */}
-                        {/* <path d={`${window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW}`} fill="red">
+                                    {/* <path d={`${window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW}`} fill="red">
                         </path>
                     </svg> */}
-                        <span>Your location</span>
-                        <svg height={"20px"} width={"20px"} viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="red"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"> <title>location</title> <g id="Page-1" stroke="none" strokeWidth="1" fill="none" fillRule="evenodd"> <g id="Combined-Shape" fill="red" transform="translate(106.666667, 42.666667)"> <path d="M149.333333,7.10542736e-15 C231.807856,7.10542736e-15 298.666667,66.8588107 298.666667,149.333333 C298.666667,174.270044 292.571852,197.766489 281.750846,218.441128 L149.333333,448 L19.9831547,224.008666 C7.25333333,202.026667 2.84217094e-14,176.537017 2.84217094e-14,149.333333 C2.84217094e-14,66.8588107 66.8588107,7.10542736e-15 149.333333,7.10542736e-15 Z M149.333333,42.6666667 C90.42296,42.6666667 42.6666667,90.42296 42.6666667,149.333333 C42.6666667,166.273109 46.5745408,182.526914 53.969702,197.200195 L57.5535689,203.746216 L149.333333,362.666667 L241.761134,202.626841 C251.054097,186.579648 256,168.390581 256,149.333333 C256,90.42296 208.243707,42.6666667 149.333333,42.6666667 Z M149.333333,85.3333333 C184.679557,85.3333333 213.333333,113.987109 213.333333,149.333333 C213.333333,184.679557 184.679557,213.333333 149.333333,213.333333 C113.987109,213.333333 85.3333333,184.679557 85.3333333,149.333333 C85.3333333,113.987109 113.987109,85.3333333 149.333333,85.3333333 Z M149.333333,128 C137.551259,128 128,137.551259 128,149.333333 C128,161.115408 137.551259,170.666667 149.333333,170.666667 C161.115408,170.666667 170.666667,161.115408 170.666667,149.333333 C170.666667,137.551259 161.115408,128 149.333333,128 Z"> </path> </g> </g> </g></svg>
-                    </div>
-                    <div>
-                        <button onClick={() => submitHandler()}>Fill Your Project Detail Here</button>
-                    </div>
-                </div>
-                {
-                    (
-                        <Map
-                            // containerStyle={{
-                            //     position: "relative",
-                            //     width: "100%",
-                            //     height: "84vh",
-                            //     borderRadius: "14px",
-                            // }}
-
-                            // google={window.google}
-                            // streetViewControl={false}
-                            // scaleControl={true}
-                            // fullscreenControl={false}
-                            // styles={
-                            //     [
-                            //         {
-                            //             featureType: "poi.business",
-                            //             elementType: "labels",
-                            //             stylers: [{
-                            //                 visibility: "off"
-                            //             }]
-                            //         }
-                            //     ]
-                            // }
-                            // gestureHandling={"greedy"}
-                            // disableDoubleClickZoom={true}
-                            // minZoom={0}
-                            // maxZoom={25}
-                            // mapTypeControl={true}
-                            // zoomControl={true}
-                            // clickableIcons={false}
-                            // mapTypeId={window.google.maps.MapTypeId.SATELLITE}
-                            minZoom={2.5}
-                            maxZoom={17}
-                            containerStyle={{
-                                position: "relative",
-                                width: "100%",
-                                height: "84vh",
-                                borderRadius: "14px",
-                            }}
-                            google={window.google}
-                            initialCenter={center}
-                            center={center}
-                            zoom={zoom}
-                            onClick={(el, y, w) => handleClick(w)}
-                            scaleControl={true}
-                            onCenterChanged={(e, ee, eee) => null}
-                            onZoomChanged={(e, ee, eee) => {
-                                setZoom(ee.getZoom())
-                            }}
-                            // disableDefaultUI={false}
-                            // mapTypeControl={true}
-                            // mapTypeControlOptions={{
-                            //     style: window.google.maps.MapTypeControlStyle.DROPDOWN_MENU,
-                            //     position: window.google.maps.ControlPosition.TOP_CENTER,
-                            //     mapTypeIds: ["id1", "id2"]
-                            // }}
-                            onReady={(e, ee) => {
-                                ee.setOptions({
-                                    mapTypeId: window.google.maps.MapTypeId.TERRAIN,
-                                    // disableDefaultUI:true,
-                                    mapTypeControl: true,
-                                    mapTypeControlOptions: {
-                                        style: window.google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-                                        position: window.google.maps.ControlPosition.TOP_LEFT,
-                                        // mapTypeIds: [
-                                        //     window.google.maps.MapTypeId.ROADMAP,
-                                        //     window.google.maps.MapTypeId.SATELLITE,
-                                        //     window.google.maps.MapTypeId.HYBRID
-                                        // ]
-                                    },
-                                    styles: [
-                                        {
-                                            featureType: "road",
-                                            stylers: [
-                                                { visibility: "off" }
-                                            ]
-                                        }
-                                    ]
-                                })
-                            }}
-                        >
-                            <div className="detail-container"
-                                style={{
-                                    height: openData ? "75vmin" : "0",
-                                    border: openData ? "2px solid orange" : "none",
-                                    // height: "70vmin",
-                                    // border:"2px solid orange",
-                                    // display:openData?"flex":"none"
-                                }}
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                }}
-                            >
-                                <i
-                                    onClick={() => setOpenData(false)}
-                                    className="fa-solid fa-xmark x-mark"></i>
-                                <div>
-                                    <h2>Project Details</h2>
+                                    <span>Your location</span>
+                                    <svg height={"20px"} width={"20px"} viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="red"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"> <title>location</title> <g id="Page-1" stroke="none" strokeWidth="1" fill="none" fillRule="evenodd"> <g id="Combined-Shape" fill="red" transform="translate(106.666667, 42.666667)"> <path d="M149.333333,7.10542736e-15 C231.807856,7.10542736e-15 298.666667,66.8588107 298.666667,149.333333 C298.666667,174.270044 292.571852,197.766489 281.750846,218.441128 L149.333333,448 L19.9831547,224.008666 C7.25333333,202.026667 2.84217094e-14,176.537017 2.84217094e-14,149.333333 C2.84217094e-14,66.8588107 66.8588107,7.10542736e-15 149.333333,7.10542736e-15 Z M149.333333,42.6666667 C90.42296,42.6666667 42.6666667,90.42296 42.6666667,149.333333 C42.6666667,166.273109 46.5745408,182.526914 53.969702,197.200195 L57.5535689,203.746216 L149.333333,362.666667 L241.761134,202.626841 C251.054097,186.579648 256,168.390581 256,149.333333 C256,90.42296 208.243707,42.6666667 149.333333,42.6666667 Z M149.333333,85.3333333 C184.679557,85.3333333 213.333333,113.987109 213.333333,149.333333 C213.333333,184.679557 184.679557,213.333333 149.333333,213.333333 C113.987109,213.333333 85.3333333,184.679557 85.3333333,149.333333 C85.3333333,113.987109 113.987109,85.3333333 149.333333,85.3333333 Z M149.333333,128 C137.551259,128 128,137.551259 128,149.333333 C128,161.115408 137.551259,170.666667 149.333333,170.666667 C161.115408,170.666667 170.666667,161.115408 170.666667,149.333333 C170.666667,137.551259 161.115408,128 149.333333,128 Z"> </path> </g> </g> </g></svg>
                                 </div>
                                 <div>
-                                    <div>
-                                        <p>Project Location </p>
-                                        <span>{openProjectData?.Country + ", " + openProjectData?.StateOrRegion}</span>
-                                    </div>
-                                    <div>
-                                        <p>Project Capacity</p>
-                                        <span>{openProjectData?.ProjectCapacity + `(${openProjectData?.CapacityUnit})`}</span>
-                                    </div>
-                                    <div>
-                                        <p>Module Details</p>
-                                        <span>{openProjectData?.ModuleType + ", " + openProjectData?.ModuleCapacity}</span>
-                                    </div>
-
-                                    <div>
-                                        <p>Inverter Details</p>
-                                        <span>{openProjectData?.InverterType + ", " + openProjectData?.StructureType}</span>
-                                    </div>
-                                    <div>
-                                        <p>Tilt Angle</p>
-                                        <span>{openProjectData?.TiltAngle}</span>
-                                    </div>
-                                    <div>
-                                        <p>Irradiation</p>
-                                        <span>{openProjectData?.Irradiation}</span>
-                                    </div>
-                                    <div>
-                                        <p>Plant Generation</p>
-                                        <span>{openProjectData?.PlantGeneration}</span>
-                                    </div>
-
-
+                                    <button onClick={() => submitHandler()}>Fill Your Project Detail Here</button>
                                 </div>
-
                             </div>
                             {
-                                projects?.map((e, index) => {
-                                    return (
-                                        <Marker
-                                            icon={{
-                                                // path:"M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z M -2,-30 a 2,2 0 1,1 4,0 2,2 0 1,1 -4,0",
-                                                path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                                                // path:"M-1.547 12l6.563-6.609-1.406-1.406-5.156 5.203-2.063-2.109-1.406 1.406zM0 0q2.906 0 4.945 2.039t2.039 4.945q0 1.453-0.727 3.328t-1.758 3.516-2.039 3.070-1.711 2.273l-0.75 0.797q-0.281-0.328-0.75-0.867t-1.688-2.156-2.133-3.141-1.664-3.445-0.75-3.375q0-2.906 2.039-4.945t4.945-2.039z",
-                                                // path:'M12.75 0l-2.25 2.25 2.25 2.25-5.25 6h-5.25l4.125 4.125-6.375 8.452v0.923h0.923l8.452-6.375 4.125 4.125v-5.25l6-5.25 2.25 2.25 2.25-2.25-11.25-11.25zM10.5 12.75l-1.5-1.5 5.25-5.25 1.5 1.5-5.25 5.25z',
-                                                strokeColor: "red",
-                                                fillColor: "red",
-                                                fillOpacity: 1,
-                                                scale: 2.5
-                                            }}
-                                            // icon={{url:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'}}
-                                            // icon={{
+                                (
+                                    <Map
+                                        // containerStyle={{
+                                        //     position: "relative",
+                                        //     width: "100%",
+                                        //     height: "84vh",
+                                        //     borderRadius: "14px",
+                                        // }}
 
-                                            //     path:'M12.75 0l-2.25 2.25 2.25 2.25-5.25 6h-5.25l4.125 4.125-6.375 8.452v0.923h0.923l8.452-6.375 4.125 4.125v-5.25l6-5.25 2.25 2.25 2.25-2.25-11.25-11.25zM10.5 12.75l-1.5-1.5 5.25-5.25 1.5 1.5-5.25 5.25z',
-                                            //     fillColor:"#fff",
-                                            //     strokeColor:"#fff",
-                                            //     scale:0.7
-                                            // }}
-                                            // onLoad={marker => {
-                                            //     const customIcon = (opts) => Object.assign({
-                                            //         path: 'M12.75 0l-2.25 2.25 2.25 2.25-5.25 6h-5.25l4.125 4.125-6.375 8.452v0.923h0.923l8.452-6.375 4.125 4.125v-5.25l6-5.25 2.25 2.25 2.25-2.25-11.25-11.25zM10.5 12.75l-1.5-1.5 5.25-5.25 1.5 1.5-5.25 5.25z',
-                                            //         fillColor: '#34495e',
-                                            //         fillOpacity: 1,
-                                            //         strokeColor: '#000',
-                                            //         strokeWeight: 1,
-                                            //         scale: 0.8,
-                                            //         height:"20px",
-                                            //         width:"20px"
-                                            //     }, opts);
-                                            //     marker.setIcon(customIcon({
-                                            //         fillColor: 'green',
-                                            //         //   fillColor: 'black',
-                                            //         strokeColor: 'white',
-                                            //     }));
-                                            // }}
-                                            key={index} position={{ lat: e?.Latitude, lng: e?.Longitude }}
-                                            onClick={(m, mm, mmm) => {
-                                                mmm.domEvent.stopPropagation()
-                                                handleexistMarkerClick(e)
+                                        // google={window.google}
+                                        // streetViewControl={false}
+                                        // scaleControl={true}
+                                        // fullscreenControl={false}
+                                        // styles={
+                                        //     [
+                                        //         {
+                                        //             featureType: "poi.business",
+                                        //             elementType: "labels",
+                                        //             stylers: [{
+                                        //                 visibility: "off"
+                                        //             }]
+                                        //         }
+                                        //     ]
+                                        // }
+                                        // gestureHandling={"greedy"}
+                                        // disableDoubleClickZoom={true}
+                                        // minZoom={0}
+                                        // maxZoom={25}
+                                        // mapTypeControl={true}
+                                        // zoomControl={true}
+                                        // clickableIcons={false}
+                                        // mapTypeId={window.google.maps.MapTypeId.SATELLITE}
+                                        minZoom={2.5}
+                                        maxZoom={17}
+                                        containerStyle={{
+                                            position: "relative",
+                                            width: "100%",
+                                            height: "84vh",
+                                            borderRadius: "14px",
+                                        }}
+
+                                        google={window.google}
+                                        initialCenter={center}
+                                        center={center}
+                                        zoom={zoom}
+                                        onClick={(el, y, w) => handleClick(w)}
+                                        scaleControl={true}
+                                        onCenterChanged={(e, ee, eee) => null}
+                                        onZoomChanged={(e, ee, eee) => {
+                                            setZoom(ee.getZoom())
+                                        }}
+                                        // disableDefaultUI={false}
+                                        // mapTypeControl={true}
+                                        // mapTypeControlOptions={{
+                                        //     style: window.google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+                                        //     position: window.google.maps.ControlPosition.TOP_CENTER,
+                                        //     mapTypeIds: ["id1", "id2"]
+                                        // }}
+                                        onReady={(e, ee) => {
+                                            ee.setOptions({
+                                                mapTypeId: window.google.maps.MapTypeId.TERRAIN,
+                                                // disableDefaultUI:true,
+                                                mapTypeControl: true,
+                                                mapTypeControlOptions: {
+                                                    style: window.google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+                                                    position: window.google.maps.ControlPosition.TOP_LEFT,
+                                                    // mapTypeIds: [
+                                                    //     window.google.maps.MapTypeId.ROADMAP,
+                                                    //     window.google.maps.MapTypeId.SATELLITE,
+                                                    //     window.google.maps.MapTypeId.HYBRID
+                                                    // ]
+                                                },
+                                                styles: [
+                                                    {
+                                                        featureType: "road",
+                                                        stylers: [
+                                                            { visibility: "off" }
+                                                        ]
+                                                    }
+                                                ]
+                                            })
+                                        }}
+                                    >
+                                        <div className="detail-container"
+                                            style={{
+                                                height: openData ? "75vmin" : "0",
+                                                border: openData ? "2px solid orange" : "none",
+                                                // height: "70vmin",
+                                                // border:"2px solid orange",
+                                                // display:openData?"flex":"none"
+                                            }}
+                                            onClick={(e) => {
+                                                e.stopPropagation()
                                             }}
                                         >
-                                        </Marker>
-                                    )
-                                })
-                            }
-                            {
-                                markers?.map((e, index) => {
-                                    return (
-                                        <Marker onClick={(ee, eee, eeee) => {
-                                            handleMarkerClick(eeee)
-                                        }}
-                                            key={index} position={{ lat: e.lat, lng: e.lng }} />
-                                    )
-                                })
-                            }
-                        </Map>
-                    )}
-            </div >
+                                            <i
+                                                onClick={() => setOpenData(false)}
+                                                className="fa-solid fa-xmark x-mark"></i>
+                                            <div>
+                                                <h2>Project Details</h2>
+                                            </div>
+                                            <div>
+                                                <div>
+                                                    <p>Project Location </p>
+                                                    <span>{openProjectData?.Country + ", " + openProjectData?.StateOrRegion}</span>
+                                                </div>
+                                                <div>
+                                                    <p>Project Capacity</p>
+                                                    <span>{openProjectData?.ProjectCapacity + `(${openProjectData?.CapacityUnit})`}</span>
+                                                </div>
+                                                <div>
+                                                    <p>Module Details</p>
+                                                    <span>{openProjectData?.ModuleType + ", " + openProjectData?.ModuleCapacity}</span>
+                                                </div>
+
+                                                <div>
+                                                    <p>Inverter Details</p>
+                                                    <span>{openProjectData?.InverterType + ", " + openProjectData?.StructureType}</span>
+                                                </div>
+                                                <div>
+                                                    <p>Tilt Angle</p>
+                                                    <span>{openProjectData?.TiltAngle}</span>
+                                                </div>
+                                                <div>
+                                                    <p>Irradiation</p>
+                                                    <span>{openProjectData?.Irradiation}</span>
+                                                </div>
+                                                <div>
+                                                    <p>Plant Generation</p>
+                                                    <span>{openProjectData?.PlantGeneration}</span>
+                                                </div>
+
+
+                                            </div>
+
+                                        </div>
+
+                                        {
+                                            projects?.map((e, index) => {
+                                                return (
+                                                    <Marker
+                                                        animation={".5s ease-in-out"}
+                                                        label={`${e.projectCount || 1}`}
+                                                        // icon={{url:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'}}
+                                                        // icon={{
+
+                                                        //     path:'M12.75 0l-2.25 2.25 2.25 2.25-5.25 6h-5.25l4.125 4.125-6.375 8.452v0.923h0.923l8.452-6.375 4.125 4.125v-5.25l6-5.25 2.25 2.25 2.25-2.25-11.25-11.25zM10.5 12.75l-1.5-1.5 5.25-5.25 1.5 1.5-5.25 5.25z',
+                                                        //     fillColor:"#fff",
+                                                        //     strokeColor:"#fff",
+                                                        //     scale:0.7
+                                                        // }}
+                                                        // onLoad={marker => {
+                                                        //     const customIcon = (opts) => Object.assign({
+                                                        //         path: 'M12.75 0l-2.25 2.25 2.25 2.25-5.25 6h-5.25l4.125 4.125-6.375 8.452v0.923h0.923l8.452-6.375 4.125 4.125v-5.25l6-5.25 2.25 2.25 2.25-2.25-11.25-11.25zM10.5 12.75l-1.5-1.5 5.25-5.25 1.5 1.5-5.25 5.25z',
+                                                        //         fillColor: '#34495e',
+                                                        //         fillOpacity: 1,
+                                                        //         strokeColor: '#000',
+                                                        //         strokeWeight: 1,
+                                                        //         scale: 0.8,
+                                                        //         height:"20px",
+                                                        //         width:"20px"
+                                                        //     }, opts);
+                                                        //     marker.setIcon(customIcon({
+                                                        //         fillColor: 'green',
+                                                        //         //   fillColor: 'black',
+                                                        //         strokeColor: 'white',
+                                                        //     }));
+                                                        // }}
+                                                        key={index} position={{ lat: e?.Latitude, lng: e?.Longitude }}
+                                                        onClick={(m, mm, mmm) => {
+
+                                                            mmm.domEvent.stopPropagation()
+
+                                                            handleexistMarkerClick(e)
+                                                        }}
+                                                    >
+                                                    </Marker>
+                                                )
+                                            })
+                                        }
+                                        {
+                                            markers?.map((e, index) => {
+                                                return (
+                                                    <Marker onClick={(ee, eee, eeee) => {
+                                                        handleMarkerClick(eeee)
+                                                    }}
+                                                        key={index} position={{ lat: e.lat, lng: e.lng }} />
+                                                )
+                                            })
+                                        }
+                                    </Map>
+                                )}
+                        </div >
+                    </>
+            }
         </>
     );
 }
