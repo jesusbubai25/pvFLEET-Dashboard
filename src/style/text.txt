@@ -1,0 +1,139 @@
+<TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            // url='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            noWrap={true}
+            
+          />
+
+          <div
+            className="detail-container"
+            style={{
+              height: openData ? "75vmin" : "0",
+              border: openData ? "2px solid orange" : "none",
+              // height: "70vmin",
+              // border:"2px solid orange",
+              // display:openData?"flex":"none"
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            ref={ref2}
+          >
+            <i
+              onClick={(e) => {
+                setOpenData(false);
+                e.stopPropagation();
+              }}
+              className="fa-solid fa-xmark x-mark"
+            ></i>
+            <div>
+              <h2>Project Details</h2>
+            </div>
+            <div>
+              <div>
+                <p>Project Location </p>
+                <span>
+                  {openProjectData?.Country +
+                    ", " +
+                    openProjectData?.StateOrRegion}
+                </span>
+              </div>
+              <div>
+                <p>Project Capacity</p>
+                <span>
+                  {openProjectData?.ProjectCapacity +
+                    `(${openProjectData?.CapacityUnit})`}
+                </span>
+              </div>
+              <div>
+                <p>Module Details</p>
+                <span>
+                  {openProjectData?.ModuleType +
+                    ", " +
+                    openProjectData?.ModuleCapacity +
+                    "Wp"}
+                </span>
+              </div>
+              <div>
+                <p>Inverter Type</p>
+                <span>{openProjectData?.InverterType}</span>
+              </div>
+              <div>
+                <p>Structure Type</p>
+                <span>{openProjectData?.StructureType}</span>
+              </div>
+              <div>
+                <p>Tilt Angle</p>
+                <span>
+                  {openProjectData?.TiltAngle}
+                  {"(Deg)"}
+                </span>
+              </div>
+              <div>
+                <p>Irradiation</p>
+                <span>{openProjectData?.Irradiation}</span>
+              </div>
+              <div>
+                <p>Plant Generation</p>
+                <span>
+                  {openProjectData?.PlantGeneration}
+                  {" GW"}
+                </span>
+              </div>
+            </div>
+          </div>
+          {marker && (
+            <Marker
+              draggable={true}
+              position={[marker.lat, marker.lng]}
+              eventHandlers={{
+                click: () => {
+                  setmarker(null);
+                },
+              }}
+            ></Marker>
+          )}
+
+          {projects?.map((e, index) => {
+            return (
+              <>
+                <DefaultIcon e={e} />
+                <Marker
+                  key={index}
+                  position={[e?.Latitude, e?.Longitude]}
+                  eventHandlers={{
+                    click: (ee) => {
+                      ee.originalEvent.stopPropagation();
+                      setOpenProjectData(e);
+                      if (ref.current.getZoom() <= 12) {
+                        ref.current.setView(
+                          { lat: e?.Latitude, lng: e?.Longitude },
+                          ref.current.getZoom() + 2,
+                          {
+                            animate: true,
+                          }
+                        );
+                      }
+                      if (ref.current.getZoom() >= 13) {
+                        ref.current.setView(
+                          { lat: e?.Latitude, lng: e?.Longitude },
+                          ref.current.getZoom(),
+                          {
+                            animate: true,
+                          }
+                        );
+                        setOpenData(true);
+                      }
+                    },
+                  }}
+                >
+                  {/* <Popup position={"top"}>
+                    Hi'there
+                  </Popup> */}
+                </Marker>
+                
+              </>
+
+            );
+          })}

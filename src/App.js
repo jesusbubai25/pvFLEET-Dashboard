@@ -7,17 +7,25 @@ import MyComponent4 from './mapComponent/MyComponent4';
 import MyComponent5 from './mapComponent/MyComponent5';
 import MyComponent6 from './mapComponent/MyComponent6';
 import StateAndCity from './mapComponent/StateAndCity';
+import SimpleMap from './mapComponent/SimpleMap';
+import Leafleet from './mapComponent/Leafleet';
+import DeckGLComp from './mapComponent/DeckGLComp';
+import MyComponent2cpy from './mapComponent/MyComponent2cpy';
 
 function App() {
   return (
     <>
       <div className='app'>
         {/* <MyComponent/> */}
-        <MyComponent2 />
+        {/* <MyComponent2 /> */}
+        {/* <MyComponent2cpy/> */}
         {/* <MyComponent3/> */}
         {/* <MyComponent4/> */}
         {/* <MyComponent6/> */}
         {/* <StateAndCity/> */}
+        {/* <SimpleMap/> */}
+        {/* <DeckGLComp/> */}
+        <Leafleet/>
 
 
       </div>

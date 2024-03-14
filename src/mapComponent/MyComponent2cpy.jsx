@@ -19,10 +19,10 @@ const CountryAndState = Country.getAllCountries();
 const TiltAngleArray = [
   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
   23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
-  42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
+  42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60
 ];
 
-const MyComponent2 = () => {
+const MyComponent2cpy = () => {
   const [marker, setMarker] = useState(null);
   const [zoom, setZoom] = useState(0.1);
   const [openData, setOpenData] = useState(false);
@@ -59,6 +59,7 @@ const MyComponent2 = () => {
     stateCode: null,
     cityCode: null,
   });
+  const ref=useRef(null)
 
   // const center = useMemo(() => ({ lat: 22.577152, lng: 88.3720192 }), []);
   const handleClick = (e) => {
@@ -87,8 +88,11 @@ const MyComponent2 = () => {
       setOpenData(true);
       setOpenProjectData(e);
     }
-    if (zoom < 13) {
+    if (zoom < 13 && e.projectCount) {
       setZoom((v) => v + 2);
+    }else{
+      setOpenData(true);
+      setOpenProjectData(e)
     }
   };
 
@@ -118,7 +122,6 @@ const MyComponent2 = () => {
       setLoading(false);
     }
   };
-  // console.log("projects is ", projects);
 
   useMemo(() => {
     if (projects.length > 0 && finalProjectLocation?.length > 0) {
@@ -143,6 +146,12 @@ const MyComponent2 = () => {
             obj.push(test);
           }
         });
+        obj.map((e,index)=>{
+          if(e.projectCount===1){
+            let val=finalProjectLocation?.find(ee=>ee.Country===e.Country);
+            obj.splice(index,1,{...val})
+          }
+        })
         setProjects(obj);
       } else if (zoom < 7) {
         let obj2 = [];
@@ -170,6 +179,13 @@ const MyComponent2 = () => {
             obj2.push(test);
           }
         });
+        obj2.map((e,index)=>{
+          if(e.projectCount===1){
+            let val=finalProjectLocation?.find(ee=>ee.StateOrRegion?.split(",")[0]===e.name);
+            console.log("e is ",e," val is ",val)
+            obj2.splice(index,1,{...val})
+          }
+        })
 
         setProjects(obj2);
       } else if (zoom < 11) {
@@ -202,6 +218,12 @@ const MyComponent2 = () => {
             obj3.push(test);
           }
         });
+        obj3.map((e,index)=>{
+          if(e.projectCount===1){
+            let val=finalProjectLocation?.find(ee=>ee.StateOrRegion?.split(",")[1].trim()===e.name);
+            obj3.splice(index,1,{...val})
+          }
+        })
         setProjects(obj3);
       } else {
         setProjects(finalProjectLocation);
@@ -845,6 +867,7 @@ const MyComponent2 = () => {
             </div>
             {
               <Map
+              ref={ref}
               style={{cursor:"default"}}
               
                 // containerStyle={{
@@ -885,10 +908,12 @@ const MyComponent2 = () => {
                   width: "100%",
                   height: "82vh",
                   borderRadius: "14px",
-                  cursor:"default"
+                  cursor:"default",
+                  
                   
                   
                 }}
+                
                 google={window.google}
                 initialCenter={center}
                 center={center}
@@ -932,6 +957,7 @@ const MyComponent2 = () => {
                         stylers: [{ visibility: "off" }],
                       },
                     ],
+                    
                   });
                 }}
               >
@@ -1012,7 +1038,7 @@ const MyComponent2 = () => {
                 {projects?.map((e, index) => {
                   return (
                     <Marker
-                      animation={".5s ease-in-out"}
+                      // animation={".5s ease-in-out"}
                       // label={`${e.projectCount || 1}`}
                       icon={{
                         //    url:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png',
@@ -1064,7 +1090,6 @@ const MyComponent2 = () => {
                       position={{ lat: e?.Latitude, lng: e?.Longitude }}
                       onClick={(m, mm, mmm) => {
                         mmm.domEvent.stopPropagation();
-
                         handleexistMarkerClick(e);
                       }}
                     ></Marker>
@@ -1073,7 +1098,7 @@ const MyComponent2 = () => {
                 {marker && (
                   <Marker
                     cursor={"default"}
-                    
+                    draggable={true}
                     onClick={()=>setMarker(null)}
                     position={{ lat: marker.lat, lng: marker.lng }}
                   />
@@ -1104,4 +1129,4 @@ export default GoogleApiWrapper({
       Please Wait . . .
     </h2>
   ),
-})(MyComponent2);
+})(MyComponent2cpy);
