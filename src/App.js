@@ -1,42 +1,24 @@
-import logo from './logo.svg';
-import './App.css';
-import MyComponent from './mapComponent/MyComponent';
-import MyComponent2 from './mapComponent/MyComponent2';
-import MyComponent3 from './mapComponent/MyComponent3';
-import MyComponent4 from './mapComponent/MyComponent4';
-import MyComponent5 from './mapComponent/MyComponent5';
-import MyComponent6 from './mapComponent/MyComponent6';
-import StateAndCity from './mapComponent/StateAndCity';
-import SimpleMap from './mapComponent/SimpleMap';
-import Leafleet from './mapComponent/Leafleet';
-import DeckGLComp from './mapComponent/DeckGLComp';
-import MyComponent2cpy from './mapComponent/MyComponent2cpy';
+import logo from "./logo.svg";
+import "./App.css";
+import MyComponent2 from "./mapComponent/MyComponent2";
+import Leafleet from "./mapComponent/Leafleet";
+import MyComponent2cpy from "./mapComponent/MyComponent2cpy";
+import Leafleet2 from "./mapComponent/Leafleet2";
 
 function App() {
   return (
     <>
-      <div className='app'>
-        {/* <MyComponent/> */}
+      <div className="app">
         {/* <MyComponent2 /> */}
-        {/* <MyComponent2cpy/> */}
-        {/* <MyComponent3/> */}
-        {/* <MyComponent4/> */}
-        {/* <MyComponent6/> */}
-        {/* <StateAndCity/> */}
-        {/* <SimpleMap/> */}
-        {/* <DeckGLComp/> */}
-        <Leafleet/>
-
-
+        <MyComponent2cpy />
+        {/* <Leafleet/> */}
+        {/* <Leafleet2/> */}
       </div>
     </>
   );
 }
 
 export default App;
-
-
-
 
 // const geocoder = new window.google.maps.Geocoder();
 // const location = {

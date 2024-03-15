@@ -3,7 +3,7 @@ import { Country, State, City } from "country-state-city";
 import { useEffect, useMemo, useRef, useState } from "react";
 import "../App.css";
 import "../style/map.css";
-import GoogleMapStyles from "./GoogleMapStyles";
+import GoogleMapStyles from "../style/GoogleMapStyles";
 import logo from "../Logo/images/location-logo-2.svg";
 import axios from "axios";
 import img from "../Logo/images/location-logo.png";

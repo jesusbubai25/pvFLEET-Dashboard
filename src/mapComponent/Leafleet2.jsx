@@ -1,19 +1,28 @@
-import { GoogleApiWrapper, InfoWindow, Map, Marker } from "google-maps-react";
-import { Country, State, City } from "country-state-city";
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
+// import { MapContainer } from 'react-leaflet/MapContainer'
+// import { TileLayer } from 'react-leaflet/TileLayer'
+// import { useMap } from 'react-leaflet/hooks'
+import "leaflet/dist/leaflet.css";
+import "./Leafleet.css";
 import "../App.css";
 import "../style/map.css";
-import GoogleMapStyles from "../style/GoogleMapStyles";
-import logo from "../Logo/images/location-logo-2.svg";
-import axios from "axios";
-import img from "../Logo/images/location-logo.png";
-import img2 from "../Logo/images/location-logo-2.svg";
-import img3 from "../Logo/images/location-logo-3.svg";
-import img4 from "../Logo/images/marker-logo-03.png";
-import img5 from "../Logo/images/marker-logo-04.png";
-import img6 from "../Logo/images/marker-logo-05.png";
 import img7 from "../Logo/images/marker-logo-06.png";
 import img8 from "../Logo/images/marker-logo-07.jpg";
+import L from "leaflet";
+import { geocodeByLatLng } from "react-google-places-autocomplete";
+
+import {
+  MapContainer,
+  Marker,
+  Popup,
+  TileLayer,
+  useMap,
+  useMapEvent,
+} from "react-leaflet";
+import icon from "leaflet/dist/images/marker-icon.png";
+import iconShadow from "leaflet/dist/images/marker-shadow.png";
+import axios from "axios";
+import { Country, State, City } from "country-state-city";
 
 const CountryAndState = Country.getAllCountries();
 const TiltAngleArray = [
@@ -29,18 +38,29 @@ const ModuleCapacityArray = [
   500, 505, 510, 515, 520, 525, 530, 535, 540, 545, 550, 555, 560, 565, 570,
   575,
 ];
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+L.Marker.prototype.options.icon = DefaultIcon;
 
-const MyComponent2cpy = () => {
-  const [marker, setMarker] = useState(null);
-  const [zoom, setZoom] = useState(1);
-  const [openData, setOpenData] = useState(false);
+console.log(City.getCitiesOfState("IN","OR")?.find(e=>e.name=="Cuttack"))
+
+
+const Leafleet2 = () => {
   const [center, setCenter] = useState({ lat: 22.577152, lng: 88.3720192 });
-  const [projectCountContainer, setProjectCountContainer] = useState(false);
+  const [zoom, setZoom] = useState(2);
   const [openProjectData, setOpenProjectData] = useState(null);
+  const [marker, setmarker] = useState(null);
   const [projects, setProjects] = useState([]);
   const [finalProjectLocation, setFinalProjectLocation] = useState([]);
-  const [openForm, setOpenForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [openData, setOpenData] = useState(false);
+  const [projectCountContainer, setProjectCountContainer] = useState(false);
+  const [openForm, setOpenForm] = useState(false);
+
   const [openDefaulData, setOpenDefaultData] = useState({
     city: false,
     moduleCapacity: false,
@@ -68,71 +88,63 @@ const MyComponent2cpy = () => {
     cityCode: null,
   });
   const ref = useRef(null);
+  const ref2 = useRef(null);
 
-  // const center = useMemo(() => ({ lat: 22.577152, lng: 88.3720192 }), []);
-  const handleClick = (e) => {
-    setMarker({ lat: e.latLng.lat(), lng: e.latLng.lng() });
-    fetch(
-      `https://api.opencagedata.com/geocode/v1/json?q=${e.latLng.lat()}+${e.latLng.lng()}&key=99a8119c167543e7976e0fddcdfd9684`
-    )
-      .then((result) => result.json())
-      .then((result) => console.log("result is ", result.results[0]))
-      .catch((err) => console.log("Error is ", err));
-  };
-
-  const handleMarkerClick = (e) => {
-    setMarker(null);
-  };
-  window.onclick = () => {
-    if (setOpenData) {
-      setOpenData(false);
-    }
-  };
-  const handleexistMarkerClick = (e) => {
-    setCenter({ lat: e?.Latitude, lng: e?.Longitude });
-    if (zoom >= 11) {
-      setOpenData(true);
-      setOpenProjectData(e);
-    }
-    if (zoom < 13 && e.projectCount) {
-      setZoom((v) => v + 2);
-    } else {
-      setOpenData(true);
-      setOpenProjectData(e);
-    }
-  };
-
-  const submitHandler = () => {
-    if (!marker) {
-      alert(`Please Select One Location !`);
-    } else {
-      setOpenForm((v) => !v);
-    }
-  };
   const formSubmitHandler = (e) => {
     e.preventDefault();
+
     registerProject(ProjectData, locationDetail.countryNumberCode, marker);
   };
-  const getAllProjects = async () => {
+  const registerProject = async (Pdata, phoneNumberCode, location) => {
     try {
-      setLoading(true);
-      const { data } = await axios.get("/pvfleet/all-project");
+      const { data } = await axios.post("/pvfleet/project-register", {
+        country: Pdata.country,
+        stateOrRegion: Pdata.state + ", " + Pdata.city,
+        projectCapacityUnit: Pdata.projectCapacityIn,
+        projectCapacity: parseFloat(Pdata.projectCapacity),
+        moduleType: Pdata.moduleType,
+        moduleCapacity: parseInt(Pdata.moduleCapacity),
+        inverterType: Pdata.inverterType,
+        structureType: Pdata.structureType,
+        tiltAngle: parseInt(Pdata.tileAngle),
+        irradiation: parseFloat(Pdata.irradiation),
+        plantGeneration: parseFloat(Pdata.plantGeneration),
+        emailID: Pdata.emailID,
+        phoneNumber: phoneNumberCode + Pdata.phoneNumber,
+        latitude: location.lat,
+        longitude: location.lng,
+      });
       if (data) {
-        setProjects([...projects, ...data?.result]);
-        setFinalProjectLocation([...data?.result]);
+        setOpenForm(false);
+        // setProjectData({
+        //     ...ProjectData,
+        //     country: null,
+        //     state: null,
+        //     city: null,
+        //     projectCapacityIn: "KWp",
+        //     projectCapacity: null,
+        //     moduleType: null,
+        //     moduleCapacity: null,
+        //     inverterType: null,
+        //     structureType: null,
+        //     tileAngle: null,
+        //     irradiation: null,
+        //     plantGeneration: null,
+        //     emailID: null,
+        //     phoneNumber: null,
+        // })
+        getAllProjects();
+        setmarker(null);
       }
     } catch (error) {
-      console.log("error is ", error.message);
       alert("Error is ", error.message);
-    } finally {
-      setLoading(false);
-      setZoom(1);
+      console.log("Error is ", error.message);
     }
   };
-  console.log(finalProjectLocation);
+
   useMemo(() => {
     if (projects.length > 0 && finalProjectLocation?.length > 0) {
-      if (zoom < 4) {
+      if (zoom < 5) {
         let obj = [];
         finalProjectLocation?.map((e, inde) => {
           let elem = obj.findIndex((ee, i) => {
@@ -188,18 +200,17 @@ const MyComponent2cpy = () => {
             obj2.push(test);
           }
         });
+
         obj2.map((e, index) => {
           if (e.projectCount === 1) {
             let val = finalProjectLocation?.find(
               (ee) => ee.StateOrRegion?.split(",")[0] === e.name
             );
-            console.log("e is ", e, " val is ", val);
             obj2.splice(index, 1, { ...val });
           }
         });
-
         setProjects(obj2);
-      } else if (zoom < 11) {
+      } else if (zoom < 10) {
         let obj3 = [];
         finalProjectLocation?.map((e, inde) => {
           let state = e.StateOrRegion?.split(",")[0];
@@ -222,8 +233,8 @@ const MyComponent2cpy = () => {
             )?.find((eee) => eee.name === city);
             let test = {
               name: result2?.name,
-              Latitude: result2?.latitude,
-              Longitude: result2?.longitude,
+              Latitude:parseFloat( result2?.latitude),
+              Longitude:parseFloat( result2?.longitude),
             };
             test["projectCount"] = 1;
             obj3.push(test);
@@ -242,58 +253,102 @@ const MyComponent2cpy = () => {
         setProjects(finalProjectLocation);
       }
     }
-  }, [zoom, finalProjectLocation]);
+  }, [loading, zoom]);
+  const GetLocation = () => {
+    const map = useMapEvent({
+      click(ee) {
+        setmarker({ lat: ee.latlng.lat, lng: ee.latlng.lng });
+      },
+      zoomend: (e) => {
+        setZoom(map.getZoom());
+      },
+    });
 
-  const registerProject = async (Pdata, phoneNumberCode, location) => {
-    try {
-      const { data } = await axios.post("/pvfleet/project-register", {
-        country: Pdata.country,
-        stateOrRegion: Pdata.state + ", " + Pdata.city,
-        projectCapacityUnit: Pdata.projectCapacityIn,
-        projectCapacity: parseFloat(Pdata.projectCapacity),
-        moduleType: Pdata.moduleType,
-        moduleCapacity: parseInt(Pdata.moduleCapacity),
-        inverterType: Pdata.inverterType,
-        structureType: Pdata.structureType,
-        tiltAngle: parseInt(Pdata.tileAngle),
-        irradiation: parseFloat(Pdata.irradiation),
-        plantGeneration: parseFloat(Pdata.plantGeneration),
-        emailID: Pdata.emailID,
-        phoneNumber: phoneNumberCode + Pdata.phoneNumber,
-        latitude: location.lat,
-        longitude: location.lng,
-      });
-      if (data) {
-        setOpenForm(false);
-        // setProjectData({
-        //     ...ProjectData,
-        //     country: null,
-        //     state: null,
-        //     city: null,
-        //     projectCapacityIn: "KWp",
-        //     projectCapacity: null,
-        //     moduleType: null,
-        //     moduleCapacity: null,
-        //     inverterType: null,
-        //     structureType: null,
-        //     tileAngle: null,
-        //     irradiation: null,
-        //     plantGeneration: null,
-        //     emailID: null,
-        //     phoneNumber: null,
-        // })
-        getAllProjects();
-        setMarker(null);
-      }
-    } catch (error) {
-      alert("Error is ", error.message);
-      console.log("Error is ", error.message);
+    useEffect(() => {
+      L.DomEvent.disableClickPropagation(ref2.current);
+    });
+  };
+  window.onclick = () => {
+    if (setOpenData) {
+      setOpenData(false);
     }
   };
+
+  const getAllProjects = async () => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get("/pvfleet/all-project");
+      if (data) {
+        setProjects([...projects, ...data?.result]);
+        setFinalProjectLocation([...finalProjectLocation, ...data?.result]);
+      }
+    } catch (error) {
+      console.log("error is ", error.message);
+      alert("Error is ", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  // console.log("zoom is ", zoom);
+  // console.log("projects is ", projects);
+  // console.log("open data ", openData);
+  // console.log("Project data ", openProjectData);
+
+  const submitHandler = async () => {
+    if (!marker) {
+      alert(`Please Select One Location !`);
+    } else {
+      try {
+        const { data } = await axios.get(
+          `https://api.opencagedata.com/geocode/v1/json?q=${marker.lat}+${marker.lng}
+     &key=99a8119c167543e7976e0fddcdfd9684`
+        );
+        if (data?.results[0]) {
+          let result = data?.results[0];
+          if (!result?.components?.country) {
+            alert(`Please Select a Valid Location !`);
+            return;
+          }
+          let c = result?.components?.state_district;
+          let city = "";
+          for (let i = 0; i < c?.length; i++) {
+            if (c[i] == " ") break;
+            else city += c[i];
+          }
+
+          setProjectData({
+            ...ProjectData,
+            country: result?.components?.country,
+            state: result?.components?.state,
+            city: city,
+          });
+        }
+      } catch (error) {}
+
+      // .then((result) => result.json())
+      // .then((result) => {
+      //   console.log(
+      //     "result is ",
+      //     result?.results[0]?.formatted,
+      //     result?.results[0]?.components
+      //   );
+      //   console.log("Country ", result?.results[0]?.components?.country);
+      //   console.log("State ", result?.results[0]?.components?.state);
+      //   console.log(
+      //     "District",
+      //     result?.results[0]?.components?.state_district
+      //   );
+      // })
+      // .catch((err) => console.log("Error is ", err.message));
+      setOpenForm((v) => !v);
+    }
+  };
+
   useEffect(() => {
     getAllProjects();
   }, []);
 
+  console.log("projects is ", projects);
   return (
     <>
       <div
@@ -313,150 +368,57 @@ const MyComponent2cpy = () => {
         <div className="form-div">
           <i
             className="fa-solid fa-xmark form-x-mark"
-            onClick={() => setOpenForm(false)}
+            onClick={() => {
+              setOpenForm(false);
+              setProjectData({
+                ...ProjectData,
+                country: null,
+                state: null,
+                city: null,
+              });
+            }}
           ></i>
           <h2>Fill Project Details</h2>
           <form autoComplete="on" onSubmit={(e) => formSubmitHandler(e)}>
             <div>
               <label htmlFor="country">Country: </label>
-              {/* <input type="text" id="name" value={ProjectData.userName} onChange={(e) => setProjectData({ ...ProjectData, userName: e.target.value })} >
-                            </input> */}
-              <select
+              <input
+                type="text"
                 id="country"
-                onChange={(e) => {
-                  setOpenDefaultData({
-                    ...openDefaulData,
-                    city: false,
-                    moduleCapacity: false,
-                  });
-                  setLocationDetail({
-                    ...locationDetail,
-                    countryCode: CountryAndState[e.target.value].isoCode,
-                  });
-                  setProjectData({
-                    ...ProjectData,
-                    country: CountryAndState[e.target.value].name,
-                  });
-                }}
-                required
-              >
-                <option selected disabled>
-                  Select Country
-                </option>
-
-                {CountryAndState?.map((e, index) => {
-                  return (
-                    <option key={index} value={index}>
-                      {e.name}
-                    </option>
-                  );
-                })}
-              </select>
+                value={ProjectData.country || ""}
+                readOnly
+                // onChange={(e) =>
+                //   setProjectData({ ...ProjectData, country: e.target.value })
+                // }
+              ></input>
             </div>
             <div>
               <label htmlFor="state">State: </label>
-              <select
+              <input
+                type="text"
                 id="state"
-                onChange={(e) => {
-                  setOpenDefaultData({
-                    ...openDefaulData,
-                    city: false,
-                    moduleCapacity: false,
-                  });
-                  let val = State.getStatesOfCountry(
-                    locationDetail.countryCode
-                  )[e.target.value];
-                  setLocationDetail({
-                    ...locationDetail,
-                    stateCode: val.isoCode,
-                  });
-                  setProjectData({
-                    ...ProjectData,
-                    state: val.name,
-                  });
-                }}
-                required
-              >
-                <option selected disabled>
-                  Select State
-                </option>
-                {State.getStatesOfCountry(locationDetail.countryCode)?.map(
-                  (e, index) => {
-                    return (
-                      <option key={index} value={index}>
-                        {e.name}
-                      </option>
-                    );
-                  }
-                )}
-              </select>
+                value={ProjectData.state || ""}
+                // onChange={(e) =>
+                //   setProjectData({ ...ProjectData, userName: e.target.value })
+                // }
+                readOnly
+              ></input>
             </div>
 
             <div>
               <label htmlFor="city">City/Region: </label>
 
-              {!openDefaulData.city && (
-                <select
-                  id="city"
-                  onChange={(e) => {
-                    if (e.target.value === "city-not-availabel") {
-                      setOpenDefaultData({
-                        ...openDefaulData,
-                        city: true,
-                      });
-                      return;
-                    }
-                    let val = City.getCitiesOfState(
-                      locationDetail.countryCode,
-                      locationDetail.stateCode
-                    )[e.target.value];
-                    setLocationDetail({
-                      ...locationDetail,
-                      cityCode: val.isoCode,
-                    });
-                    setProjectData({
-                      ...ProjectData,
-                      city: val.name,
-                    });
-                  }}
-                  required
-                >
-                  <option selected disabled>
-                    Select City
-                  </option>
-                  <option
-                    style={{ fontWeight: "700" }}
-                    key={"city-not-availabel"}
-                    value={"city-not-availabel"}
-                  >
-                    City not available in the below list
-                  </option>
-
-                  {City.getCitiesOfState(
-                    locationDetail.countryCode,
-                    locationDetail.stateCode
-                  )?.map((e, index) => {
-                    return (
-                      <option key={index} value={index}>
-                        {e.name}
-                      </option>
-                    );
-                  })}
-                </select>
-              )}
-              {openDefaulData.city && (
-                <input
-                  type="text"
-                  id="city"
-                  value={ProjectData.city}
-                  onChange={(e) =>
-                    setProjectData({ ...ProjectData, city: e.target.value })
-                  }
-                  required
-                />
-              )}
+              <input
+                type="text"
+                id="city"
+                value={ProjectData.city || ""}
+                //   onChange={(e) =>
+                //     setProjectData({ ...ProjectData, city: e.target.value })
+                //   }
+                //   required
+                readOnly
+              />
             </div>
-
             <div>
               <label htmlFor="project-capacity">Capacity: </label>
               <input
@@ -662,7 +624,6 @@ const MyComponent2cpy = () => {
             </div>
             <div>
               <label htmlFor="irradiation">Plant Generation: </label>
-
               <input
                 type="number"
                 id="plant-generation"
@@ -753,42 +714,23 @@ const MyComponent2cpy = () => {
             </div>
             <div>
               {/* <div><span>Please Wait </span><span>&nbsp;.</span><span>&nbsp;.</span><span>&nbsp;.</span></div> */}
-
               <input type="submit" value="Submit" />
             </div>
           </form>
         </div>
       </div>
-      {/* {loading ? (
-        <div
-          style={{
-            textAlign: "center",
-            height: "100vh",
-            width: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "white",
-            fontSize: "5vmin",
-          }}
-        >
-          Please Wait . . .
-        </div>
-      ) : ( */}
-      <>
-        {/* <div className="heading-container">
-            <h3>!! Welcome TO pvFLEET Performance Dashboard !! </h3>
-            <div>
-              <span>GreenEnco Limited </span>
-              <span>Maximizing Asset Values</span>
-            </div>
-          </div> */}
-        <div className="main-container">
+      <div
+        style={{
+          padding: "2vmin",
+          height: "100%",
+          display: "flex",
+          // alignItems: "center",
+          // justifyContent: "center",
+          flexDirection: "column",
+        }}
+      >
+        <div className="main-container-1">
           <div>
-            <div>
-              <span>GreenEnco Limited </span>
-              <span>Maximizing Asset Values</span>
-            </div>
             <div>
               <span>Project Locations</span>
               <img
@@ -809,6 +751,7 @@ const MyComponent2cpy = () => {
               {/* <path d={`${window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW}`} fill="red">
                         </path>
                     </svg> */}
+                    <span style={{height:"15px",borderLeft:"3px solid transparent"}}></span>
               <span>Your location</span>
               <svg
                 height={"25px"}
@@ -816,7 +759,7 @@ const MyComponent2cpy = () => {
                 viewBox="0 0 512 512"
                 version="1.1"
                 xmlns="http://www.w3.org/2000/svg"
-                fill="red"
+                fill="rgb(4, 142, 173)"
               >
                 <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
                 <g
@@ -837,7 +780,7 @@ const MyComponent2cpy = () => {
                     {" "}
                     <g
                       id="Combined-Shape"
-                      fill="red"
+                      fill="rgb(14, 200, 241)"
                       transform="translate(106.666667, 42.666667)"
                     >
                       {" "}
@@ -849,103 +792,63 @@ const MyComponent2cpy = () => {
                 </g>
               </svg>
             </div>
+            <div className="logo-container">
+              <div>
+                <span>GreenEnco Limited </span>
+                <span>Maximizing Asset Values</span>
+              </div>
+            </div>
             <div>
               <button onClick={() => submitHandler()}>
                 Fill Your Project Detail Here
               </button>
             </div>
           </div>
-          {!loading && (
-            <Map
-              ref={ref}
-              style={{ cursor: "default" }}
-              // containerStyle={{
-              //     position: "relative",
-              //     width: "100%",
-              //     height: "84vh",
-              //     borderRadius: "14px",
-              // }}
+        </div>
+        {loading ? (
+          <div style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",color:"white"}}>
+          <h3>Please Wait...</h3>
+          </div>
+        ) : (
+          <MapContainer
+            center={[center.lat, center.lng]}
+            zoom={zoom}
+            minZoom={2}
+            maxZoom={15}
+            ref={ref}
+            style={{
+              width: "100%",
+              height: "100%",
+              cursor: "default",
+            }}
+            worldCopyJump={true}
+            
 
-              // google={window.google}
-              // streetViewControl={false}
-              // scaleControl={true}
-              // fullscreenControl={false}
-              // styles={
-              //     [
-              //         {
-              //             featureType: "poi.business",
-              //             elementType: "labels",
-              //             stylers: [{
-              //                 visibility: "off"
-              //             }]
-              //         }
-              //     ]
-              // }
-              // gestureHandling={"greedy"}
-              // disableDoubleClickZoom={true}
-              // minZoom={0}
-              // maxZoom={25}
-              // mapTypeControl={true}
-              // zoomControl={true}
-              // clickableIcons={false}
-              // mapTypeId={window.google.maps.MapTypeId.SATELLITE}
-              minZoom={2.5}
-              maxZoom={17}
-              containerStyle={{
-                position: "relative",
-                width: "100%",
-                height: "91vh",
-                borderRadius: "14px",
-                cursor: "default",
-              }}
-              google={window.google}
-              initialCenter={center}
-              center={center}
-              zoom={zoom}
-              onClick={(el, y, w) => handleClick(w)}
-              scaleControl={true}
-              onCenterChanged={(e, ee, eee) => null}
-              onZoomChanged={(e, ee, eee) => {
-                setZoom(ee.getZoom());
-              }}
-              draggingCursor={"default"}
-              draggableCursor={"default"}
-              // disableDefaultUI={false}
-              // mapTypeControl={true}
-              // mapTypeControlOptions={{
-              //     style: window.google.maps.MapTypeControlStyle.DROPDOWN_MENU,
-              //     position: window.google.maps.ControlPosition.TOP_CENTER,
-              //     mapTypeIds: ["id1", "id2"]
-              // }}
-              onReady={(e, ee) => {
-                ee.setOptions({
-                  mapTypeId: window.google.maps.MapTypeId.TERRAIN,
-                  // disableDefaultUI:true,
-                  mapTypeControl: true,
-                  mapTypeControlOptions: {
-                    style:
-                      window.google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-                    position: window.google.maps.ControlPosition.TOP_LEFT,
-                    // mapTypeIds: [
-                    //     window.google.maps.MapTypeId.ROADMAP,
-                    //     window.google.maps.MapTypeId.SATELLITE,
-                    //     window.google.maps.MapTypeId.HYBRID
-                    // ]
-                  },
-                  styles: [
-                    {
-                      featureType: "road",
-                      stylers: [{ visibility: "off" }],
-                    },
-                  ],
-                });
-              }}
-            >
-              <div
+            // doubleClickZoom={false}
+            // dragging={false}
+          >
+            {/* <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          noWrap={true}
+        /> */}
+            <TileLayer
+            
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              // url='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              // url="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              // url="https://stamen-tiles-{s}.a.ssl.fastly.net/{style}/{z}/{x}/{y}.{ext}"
+              // url="https://{s}.basemaps.cartocdn.com/{'light_all'}/{z}/{x}/{y}{r}.{ext}"
+              // url="https://{s}.tile.thunderforest.com/light_all/{z}/{x}/{y}.png"
+              // noWrap={true}
+            />
+             <div
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  zIndex:-1                 
                 }}
               >
                 <h2
@@ -953,8 +856,8 @@ const MyComponent2cpy = () => {
                     position: "relative",
                     top: "1vmin",
                     zIndex: 1111,
-                    color: "white",
-                    fontWeight: "800",
+                    color: "black",
+                    fontWeight: 1000,
                     width: "fit-content",
                     opacity:0.8
                   }}
@@ -962,173 +865,178 @@ const MyComponent2cpy = () => {
                   !! Welcome TO pvFLEET Performance Dashboard !!{" "}
                 </h2>
               </div>
-              <div
-                className="detail-container"
-                style={{
-                  height: openData ? "75vmin" : "0",
-                  border: openData ? "2px solid orange" : "none",
-                  // height: "70vmin",
-                  // border:"2px solid orange",
-                  // display:openData?"flex":"none"
-                }}
+
+            <div
+              className="detail-container-1"
+              style={{
+                height: openData ? "75vmin" : "0",
+                border: openData ? "2px solid orange" : "none",
+                // height: "70vmin",
+                // border:"2px solid orange",
+                // display:openData?"flex":"none"
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              ref={ref2}
+            >
+              <i
                 onClick={(e) => {
+                  setOpenData(false);
                   e.stopPropagation();
                 }}
-              >
-                <i
-                  onClick={() => setOpenData(false)}
-                  className="fa-solid fa-xmark x-mark"
-                ></i>
+                className="fa-solid fa-xmark x-mark"
+              ></i>
+              <div>
+                <h2>Project Details</h2>
+              </div>
+              <div>
                 <div>
-                  <h2>Project Details</h2>
+                  <p>Project Location </p>
+                  <span>
+                    {openProjectData?.Country +
+                      ", " +
+                      openProjectData?.StateOrRegion}
+                  </span>
                 </div>
                 <div>
-                  <div>
-                    <p>Project Location </p>
-                    <span>
-                      {openProjectData?.Country +
-                        ", " +
-                        openProjectData?.StateOrRegion}
-                    </span>
-                  </div>
-                  <div>
-                    <p>Project Capacity</p>
-                    <span>
-                      {openProjectData?.ProjectCapacity +
-                        `(${openProjectData?.CapacityUnit})`}
-                    </span>
-                  </div>
-                  <div>
-                    <p>Module Details</p>
-                    <span>
-                      {openProjectData?.ModuleType +
-                        ", " +
-                        openProjectData?.ModuleCapacity +
-                        "Wp"}
-                    </span>
-                  </div>
-                  <div>
-                    <p>Inverter Type</p>
-                    <span>{openProjectData?.InverterType}</span>
-                  </div>
-                  <div>
-                    <p>Structure Type</p>
-                    <span>{openProjectData?.StructureType}</span>
-                  </div>
-                  <div>
-                    <p>Tilt Angle</p>
-                    <span>
-                      {openProjectData?.TiltAngle}
-                      {"(Deg)"}
-                    </span>
-                  </div>
-                  <div>
-                    <p>Irradiation</p>
-                    <span>{openProjectData?.Irradiation}</span>
-                  </div>
-                  <div>
-                    <p>Plant Generation</p>
-                    <span>
-                      {openProjectData?.PlantGeneration}
-                      {" GW"}
-                    </span>
-                  </div>
+                  <p>Project Capacity</p>
+                  <span>
+                    {openProjectData?.ProjectCapacity +
+                      `(${openProjectData?.CapacityUnit})`}
+                  </span>
+                </div>
+                <div>
+                  <p>Module Details</p>
+                  <span>
+                    {openProjectData?.ModuleType +
+                      ", " +
+                      openProjectData?.ModuleCapacity +
+                      "Wp"}
+                  </span>
+                </div>
+                <div>
+                  <p>Inverter Type</p>
+                  <span>{openProjectData?.InverterType}</span>
+                </div>
+                <div>
+                  <p>Structure Type</p>
+                  <span>{openProjectData?.StructureType}</span>
+                </div>
+                <div>
+                  <p>Tilt Angle</p>
+                  <span>
+                    {openProjectData?.TiltAngle}
+                    {"(Deg)"}
+                  </span>
+                </div>
+                <div>
+                  <p>Irradiation</p>
+                  <span>{openProjectData?.Irradiation}</span>
+                </div>
+                <div>
+                  <p>Plant Generation</p>
+                  <span>
+                    {openProjectData?.PlantGeneration}
+                    {" GW"}
+                  </span>
                 </div>
               </div>
+            </div>
+            {marker && (
+              <Marker
+                draggable={true}
+                position={[marker.lat, marker.lng]}
+                eventHandlers={{
+                  click: () => {
+                    setmarker(null);
+                  },
+                }}
+              ></Marker>
+            )}
 
-              {projects?.map((e, index) => {
-                return (
+            {projects?.map((e, index) => {
+              let DefaultIcon = L.divIcon({
+                className: "defaultIcon",
+                html: `
+              <img src=${img7}  id=defaultIconImg />
+              <span id=defaultIconImgSpan >${
+                e?.projectCount > 1 ? e?.projectCount : ""
+              }</span>
+              `,
+                // iconSize: [25, 25],
+                iconAnchor: [15, 25],
+              });
+              return (
+                <>
                   <Marker
-                    // animation={".5s ease-in-out"}
-                    // label={`${e.projectCount || 1}`}
-                    icon={{
-                      //    url:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png',
-                      // path:'M12.75 0l-2.25 2.25 2.25 2.25-5.25 6h-5.25l4.125 4.125-6.375 8.452v0.923h0.923l8.452-6.375 4.125 4.125v-5.25l6-5.25 2.25 2.25 2.25-2.25-11.25-11.25zM10.5 12.75l-1.5-1.5 5.25-5.25 1.5 1.5-5.25 5.25z',
-                      // scale:1,
-                      url: img7,
-                      // scale:0.5
-
-                      scaledSize: new window.google.maps.Size(
-                        35 + zoom * 2,
-                        35 + zoom * 2
-                      ),
-                    }}
-                    label={
-                      e.projectCount > 1
-                        ? {
-                            text: `${e.projectCount}`,
-                            fontWeight: "1000",
-                            fontSize: "2vmin",
-                            color: "white",
-                          }
-                        : null
-                    }
-                    // icon={{url:'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png'}}
-                    // icon={{
-
-                    //     path:'M12.75 0l-2.25 2.25 2.25 2.25-5.25 6h-5.25l4.125 4.125-6.375 8.452v0.923h0.923l8.452-6.375 4.125 4.125v-5.25l6-5.25 2.25 2.25 2.25-2.25-11.25-11.25zM10.5 12.75l-1.5-1.5 5.25-5.25 1.5 1.5-5.25 5.25z',
-                    //     fillColor:"#fff",
-                    //     strokeColor:"#fff",
-                    //     scale:0.7
-                    // }}
-                    // onLoad={marker => {
-                    //     const customIcon = (opts) => Object.assign({
-                    //         path: 'M12.75 0l-2.25 2.25 2.25 2.25-5.25 6h-5.25l4.125 4.125-6.375 8.452v0.923h0.923l8.452-6.375 4.125 4.125v-5.25l6-5.25 2.25 2.25 2.25-2.25-11.25-11.25zM10.5 12.75l-1.5-1.5 5.25-5.25 1.5 1.5-5.25 5.25z',
-                    //         fillColor: '#34495e',
-                    //         fillOpacity: 1,
-                    //         strokeColor: '#000',
-                    //         strokeWeight: 1,
-                    //         scale: 0.8,
-                    //         height:"20px",
-                    //         width:"20px"
-                    //     }, opts);
-                    //     marker.setIcon(customIcon({
-                    //         fillColor: 'green',
-                    //         //   fillColor: 'black',
-                    //         strokeColor: 'white',
-                    //     }));
-                    // }}
+                    icon={DefaultIcon}
                     key={index}
-                    position={{ lat: e?.Latitude, lng: e?.Longitude }}
-                    onClick={(m, mm, mmm) => {
-                      mmm.domEvent.stopPropagation();
-                      handleexistMarkerClick(e);
+                    position={[e?.Latitude, e?.Longitude]}
+                    eventHandlers={{
+                      click: (ee) => {
+                        ee.originalEvent.stopPropagation();
+                        if (ref.current.getZoom() <= 12 && e?.projectCount) {
+                          ref.current.flyTo(
+                            { lat: e?.Latitude, lng: e?.Longitude },
+                            ref.current.getZoom() + 1.5,
+                            {
+                              animate: true,
+                              duration: 0.5,
+                            }
+                          );
+                        }
+                        if (ref.current.getZoom() >= 12) {
+                          ref.current.flyTo(
+                            { lat: e?.Latitude, lng: e?.Longitude },
+                            ref.current.getZoom(),
+                            {
+                              animate: true,
+                              duration: 0.5,
+                            }
+                          );
+                          setOpenProjectData(e);
+                          setOpenData(true);
+                        }
+                        if (!e.projectCount) {
+                          ref.current.flyTo(
+                            { lat: e?.Latitude, lng: e?.Longitude },
+                            ref.current.getZoom(),
+                            {
+                              animate: true,
+                              duration: 0.5,
+                            }
+                          );
+                          setOpenData(true);
+                          setOpenProjectData(e);
+                        }
+                      },
                     }}
                   ></Marker>
-                );
-              })}
-              {marker && (
-                <Marker
-                  cursor={"default"}
-                  draggable={true}
-                  onClick={() => setMarker(null)}
-                  position={{ lat: marker.lat, lng: marker.lng }}
-                />
-              )}
-            </Map>
-          )}
-        </div>
-      </>
-      {/* )} */}
+                </>
+              );
+            })}
+
+            <GetLocation />
+          </MapContainer>
+        )}
+      </div>
     </>
   );
 };
 
-export default GoogleApiWrapper({
-  apiKey: "AIzaSyDP7lrCRX5_2WBxb_upHhF9P-9Xk8nwhd8",
-  LoadingContainer: () => (
-    <h2
-      style={{
-        textAlign: "center",
-        height: "100%",
-        width: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "white",
-      }}
-    >
-      Please Wait . . .
-    </h2>
-  ),
-})(MyComponent2cpy);
+export default Leafleet2;
+
+// "Ganjam"
+// latitude
+// "19.38705000"
+// longitude
+// "85.05079000"
+
+// "Cuttack"
+// latitude
+// "20.50000000"
+// longitude
+// "86.25000000"
+
+

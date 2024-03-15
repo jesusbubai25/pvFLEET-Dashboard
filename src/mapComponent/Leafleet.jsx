@@ -172,17 +172,17 @@ const Leafleet = () => {
           .then((result) => {
             console.log(
               "result is ",
-              result.results[0].formatted,
-              result.results[0].components
+              result?.results[0]?.formatted,
+              result?.results[0]?.components
             );
-            console.log("Country ", result.results[0].components.country);
-            console.log("State ", result.results[0].components.state);
+            console.log("Country ", result?.results[0]?.components?.country);
+            console.log("State ", result?.results[0]?.components?.state);
             console.log(
               "District",
-              result.results[0].components.state_district
+              result?.results[0]?.components?.state_district
             );
           })
-          .catch((err) => console.log("Error is ", err));
+          .catch((err) => console.log("Error is ", err.message));
       },
       zoomend: (e) => {
         setZoom(map.getZoom());
@@ -288,7 +288,7 @@ const Leafleet = () => {
           maxZoom={15}
           ref={ref}
           whenReady={(e) => {
-            console.log("ref1 ", ref, " ref2 ", ref2, " e is ", e);
+            // console.log("ref1 ", ref, " ref2 ", ref2, " e is ", e);
           }}
           style={{
             width: "100%",

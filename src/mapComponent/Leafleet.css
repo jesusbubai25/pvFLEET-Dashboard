@@ -1,105 +1,76 @@
-.heading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  padding-top: 2vmin;
-  padding-bottom: 0.5vmin;
-  width: 98%;
-  margin: auto;
-  margin-bottom: 0.5vmin;
-  border-bottom: 1px solid whitesmoke;
-  text-align: center;
+
+
+.main-container-1 {
   position: relative;
-}
-.heading-container > div {
-  left: 0;
-  bottom: 0;
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding-bottom: 0.5vmin;
-}
-.heading-container > div > :first-child {
-  font-size: 2.5vmin;
-  font-weight: 800;
-  letter-spacing: 0.1vmin;
-}
-.heading-container > div > :last-child {
-  font-size: 1.6vmin;
-  letter-spacing: 0.05vmin;
-  position: relative;
-  bottom: 0.2vmin;
-}
-.main-container {
-  height: 100%;
-  position: relative;
+  height: fit-content;
   width: 100%;
   display: flex;
-  padding: 1vmin 2vmin;
+  padding: 1vmin 0vmin;
   justify-content: flex-start;
   gap: 1vmin;
   flex-direction: column;
+  box-shadow: none;
 }
 
-.main-container > :first-child {
+.main-container-1 > :first-child {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-end;
+  justify-content: center;
   position: relative;
   width: 100%;
   margin: auto;
   padding: 0 1vmin;
+  box-shadow: none;
 }
-.main-container > :first-child > :first-child {
+.main-container-1 > :first-child > :first-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1vmin;
+  color: white;
+}
+
+.main-container-1 > :first-child > :first-child > span {
+  font-size: 2.5vmin;
+  font-weight: 600;
+}
+.main-container-1 > :first-child > :nth-child(2) {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+.logo-container>div{
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   color: white;
 }
-.main-container > :first-child > :first-child > :first-child {
+.logo-container > div > :first-child {
   font-size: 2.5vmin;
   font-weight: 800;
+  letter-spacing: 0.1vmin;
 }
-.main-container > :first-child > :first-child > :last-child {
-  font-size: 1.7vmin;
-}
-.main-container > :first-child > :nth-child(2) {
-  width: 100%;
-  margin: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1vmin;
-  color: white;
-  position: absolute;
-  bottom: -0.2vmin;
-}
-
-.main-container > :first-child > :nth-child(2) > span {
-  font-size: 2.5vmin;
-  font-weight: 600;
-}
-.main-container > :first-child > :last-child {
+.logo-container > div > :last-child {
+  font-size: 1.6vmin;
+  letter-spacing: 0.05vmin;
   position: relative;
-  z-index: 11;
-  /* position: absolute;
-  right: 0;
-  bottom: 0; */
 }
-.main-container > :first-child > :last-child > p {
+.main-container-1 > :first-child > :last-child {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+}
+.main-container-1 > :first-child > :last-child > p {
   font-size: 2vmin;
   font-weight: 700;
   text-align: center;
   color: white;
 }
 
-.main-container > :first-child > :last-child > button {
+.main-container-1 > :first-child > :last-child > button {
   padding: 1vmin 3vmin;
+  margin-left: 1vmin;
   outline: none;
   border: none;
   font-size: 2vmin;
@@ -108,23 +79,12 @@
   cursor: pointer;
   background-color: rgb(248, 110, 60);
   transition: 0.2s ease-in-out;
-  box-shadow: 1px 1px 3px black;
 }
 
-.main-container > :first-child > :last-child > button:hover {
+.main-container-1 > :first-child > :last-child > button:hover {
   scale: 1.03;
   background-color: rgb(245, 89, 32);
 }
-
-.main-container > :last-child {
-  border-radius: 4px;
-  /* box-shadow: 5px 3px 5px 2px black; */
-}
-
-.main-container > :last-child > :first-child {
-  border-radius: 4px;
-}
-
 .edit-icon {
   margin: 0 1vmin;
   cursor: pointer;
@@ -141,7 +101,7 @@
   position: absolute;
   height: 0;
   width: 100%;
-  z-index: 1;
+  z-index: 1112;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -207,9 +167,9 @@
   /* box-shadow: 1.5px 1.5px 4px rgb(158, 245, 255); */
 }
 /* .form-div>form>:nth-child(3) {
-    grid-column-start: 1;
-    grid-column-end: 3;
-} */
+      grid-column-start: 1;
+      grid-column-end: 3;
+  } */
 
 .form-div > form > :last-child {
   position: relative;
@@ -266,7 +226,7 @@
 @keyframes loading1 {
   50% {
     /* color: rgb(155, 155, 155);
-        font-weight: 1000; */
+          font-weight: 1000; */
     display: block;
   }
   100% {
@@ -276,7 +236,7 @@
 @keyframes loading2 {
   50% {
     /* color: rgb(155, 155, 155);
-        font-weight: 1000; */
+          font-weight: 1000; */
   }
   100% {
     /* color: black; */
@@ -313,10 +273,9 @@
   scale: 0.8;
 }
 
-.detail-container {
+.detail-container-1 {
   position: absolute;
   right: 0%;
-  top: 0%;
   z-index: 1111;
   background-color: #f8f9f9;
   display: flex;
@@ -329,7 +288,7 @@
   width: 45vmin;
 }
 
-.detail-container > :nth-child(2) {
+.detail-container-1 > :nth-child(2) {
   background: #fff;
   width: 100%;
   position: relative;
@@ -341,31 +300,30 @@
   padding: 1rem 2rem;
 }
 
-.detail-container > :last-child {
+.detail-container-1 > :last-child {
   padding: 1rem 2rem;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
   flex-direction: column;
-  gap: 2vmin;
+  gap: 1.5vmin;
   height: 100%;
   width: 100%;
   color: black;
 }
-.detail-container > :last-child > div {
+.detail-container-1 > :last-child > div {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 0.3vmin;
 }
-.detail-container > :last-child > div > p {
-  font-size: 1.1vmax;
+.detail-container-1 > :last-child > div > p {
+  font-size: 1.05vmax;
   font-weight: 900;
 }
-.detail-container > :last-child > div > span{
-  font-size: 2vmin;
+.detail-container-1 > :last-child > div > span{
+  font-size: 1.8vmin;
 }
 
 .x-mark {
@@ -389,9 +347,9 @@
 .defaultIcon {
   /* color: red; */
   /* padding: 1rem;
-    border-radius: 50%;
-    background-color: rgb(255, 203, 130);
-    border: 2px solid rgb(165, 162, 162);*/
+      border-radius: 50%;
+      background-color: rgb(255, 203, 130);
+      border: 2px solid rgb(165, 162, 162);*/
   position: relative;
 }
 #defaultIconImg {
@@ -411,5 +369,5 @@
 }
 
 /* .leaflet-container {
-    outline: 0 !important;
-} */
+      outline: 0 !important;
+  } */
