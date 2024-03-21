@@ -5,11 +5,11 @@ import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import "./Leafleet.css";
 import "../App.css";
-import "../style/map.css";
 import img7 from "../Logo/images/marker-logo-06.png";
 import img8 from "../Logo/images/marker-logo-07.jpg";
 import L from "leaflet";
 import { geocodeByLatLng } from "react-google-places-autocomplete";
+import MarkerClusterGroup from "../Test/marker-cluster";
 
 import {
   MapContainer,
@@ -23,6 +23,7 @@ import icon from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
 import axios from "axios";
 import { Country, State, City } from "country-state-city";
+import "../style/style.css";
 
 const CountryAndState = Country.getAllCountries();
 const TiltAngleArray = [
@@ -45,22 +46,22 @@ let DefaultIcon = L.icon({
   iconAnchor: [12, 41],
 });
 L.Marker.prototype.options.icon = DefaultIcon;
-console.log(State.getStatesOfCountry("IN"))
-console.log(
-  City.getCitiesOfState("IN", "TG")
-);
+// console.log(State.getStatesOfCountry("IN"));
+// console.log(City.getCitiesOfState("IN", "TG"));
 
-const Leafleet2 = () => {
+const LeafleetFinal = () => {
   const [center, setCenter] = useState({ lat: 22.577152, lng: 88.3720192 });
   const [zoom, setZoom] = useState(2);
   const [openProjectData, setOpenProjectData] = useState(null);
   const [marker, setmarker] = useState(null);
   const [projects, setProjects] = useState([]);
-  const [finalProjectLocation, setFinalProjectLocation] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingRegister, setLoadingRegister] = useState(false);
   const [openData, setOpenData] = useState(false);
-  const [projectCountContainer, setProjectCountContainer] = useState(false);
   const [openForm, setOpenForm] = useState(false);
+  const [openCountryDetail, setOpenCountryDetail] = useState(false);
+  const [storeCountry, setStoreCountry] = useState([]);
+  const [selectedMarker, setSelectedMarker] = useState(false);
 
   const [openDefaulData, setOpenDefaultData] = useState({
     city: false,
@@ -83,37 +84,41 @@ const Leafleet2 = () => {
     phoneNumber: null,
   });
   const [locationDetail, setLocationDetail] = useState({
-    countryCode: null,
     countryNumberCode: null,
-    stateCode: null,
-    cityCode: null,
+    state: false,
+    city: false,
   });
   const ref = useRef(null);
   const ref2 = useRef(null);
 
-  const formSubmitHandler = (e) => {
+  const formSubmitHandler = async (e) => {
     e.preventDefault();
-
-    registerProject(ProjectData, locationDetail.countryNumberCode, marker);
-  };
-  const registerProject = async (Pdata, phoneNumberCode, location) => {
     try {
+      setLoadingRegister(true);
       const { data } = await axios.post("/pvfleet/project-register", {
-        country: Pdata.country,
-        stateOrRegion: Pdata.state + ", " + Pdata.city,
-        projectCapacityUnit: Pdata.projectCapacityIn,
-        projectCapacity: parseFloat(Pdata.projectCapacity),
-        moduleType: Pdata.moduleType,
-        moduleCapacity: parseInt(Pdata.moduleCapacity),
-        inverterType: Pdata.inverterType,
-        structureType: Pdata.structureType,
-        tiltAngle: parseInt(Pdata.tileAngle),
-        irradiation: parseFloat(Pdata.irradiation),
-        plantGeneration: parseFloat(Pdata.plantGeneration),
-        emailID: Pdata.emailID,
-        phoneNumber: phoneNumberCode + Pdata.phoneNumber,
-        latitude: location.lat,
-        longitude: location.lng,
+        country: ProjectData.country,
+        // stateOrRegion: ProjectData.state + ", " + ProjectData.city,
+        stateOrRegion:
+          ProjectData.state && ProjectData.city
+            ? ProjectData.state + ", " + ProjectData.city
+            : ProjectData.state
+            ? ProjectData.state
+            : ProjectData.city
+            ? ProjectData.city
+            : "",
+        projectCapacityUnit: ProjectData.projectCapacityIn,
+        projectCapacity: parseFloat(ProjectData.projectCapacity),
+        moduleType: ProjectData.moduleType,
+        moduleCapacity: parseInt(ProjectData.moduleCapacity),
+        inverterType: ProjectData.inverterType,
+        structureType: ProjectData.structureType,
+        tiltAngle: parseInt(ProjectData.tileAngle),
+        irradiation: parseFloat(ProjectData.irradiation),
+        plantGeneration: parseFloat(ProjectData.plantGeneration),
+        emailID: ProjectData.emailID,
+        phoneNumber: locationDetail.countryNumberCode + ProjectData.phoneNumber,
+        latitude: marker?.lat,
+        longitude: marker?.lng,
       });
       if (data) {
         setOpenForm(false);
@@ -136,134 +141,26 @@ const Leafleet2 = () => {
         // })
         getAllProjects();
         setmarker(null);
-        setZoom(2)
+        setZoom(2);
       }
     } catch (error) {
-      alert("Error is ", error.message);
-      console.log("Error is ", error.message);
+      alert("Error is " + error.response.data.error);
+      console.log("Error is ", error.response.data.error);
+    } finally {
+      setLoadingRegister(false);
     }
   };
 
-  useMemo(() => {
-    if (projects.length > 0 && finalProjectLocation?.length > 0) {
-      if (zoom < 5) {
-        let obj = [];
-        finalProjectLocation?.map((e, inde) => {
-          let elem = obj.findIndex((ee, i) => {
-            return ee["Country"] === e.Country;
-          });
-          if (elem >= 0) {
-            let test = { ...obj[elem] };
-            test["projectCount"] = obj[elem]["projectCount"] + 1;
-            obj.splice(elem, 1, test);
-          } else {
-            let country = CountryAndState.find((ee) => ee.name === e.Country);
-            let test = {
-              Country: country?.name,
-              Latitude: country?.latitude,
-              Longitude: country?.longitude,
-            };
-            test["projectCount"] = 1;
-            obj.push(test);
-          }
-        });
-        obj.map((e, index) => {
-          if (e.projectCount === 1) {
-            let val = finalProjectLocation?.find(
-              (ee) => ee.Country === e.Country
-            );
-            obj.splice(index, 1, { ...val });
-          }
-        });
-        setProjects(obj);
-      } else if (zoom < 7) {
-        let obj2 = [];
-        finalProjectLocation?.map((e, inde) => {
-          let state = e.StateOrRegion?.split(",")[0];
-          let elem = obj2.findIndex((ee, i) => {
-            return ee["name"]?.split(",")[0] === state;
-          });
-
-          if (elem >= 0) {
-            let test = { ...obj2[elem] };
-            test["projectCount"] = obj2[elem]["projectCount"] + 1;
-            obj2.splice(elem, 1, test);
-          } else {
-            let country = CountryAndState.find((ee) => ee.name === e.Country);
-            let result = State.getStatesOfCountry(country.isoCode)?.find(
-              (ee) => ee.name === state
-            );
-            let test = {
-              name: result?.name,
-              Latitude: result?.latitude,
-              Longitude: result?.longitude,
-            };
-            test["projectCount"] = 1;
-            obj2.push(test);
-          }
-        });
-
-        obj2.map((e, index) => {
-          if (e.projectCount === 1) {
-            let val = finalProjectLocation?.find(
-              (ee) => ee.StateOrRegion?.split(",")[0] === e.name
-            );
-            obj2.splice(index, 1, { ...val });
-          }
-        });
-        setProjects(obj2);
-      } else if (zoom < 11) {
-        let obj3 = [];
-        finalProjectLocation?.map((e, inde) => {
-          let state = e.StateOrRegion?.split(",")[0];
-          let city = e.StateOrRegion?.split(",")[1].trim();
-          let elem = obj3.findIndex((ee, i) => {
-            return ee["name"]?.split(",")[0] === city;
-          });
-          if (elem >= 0) {
-            let test = { ...obj3[elem] };
-            test["projectCount"] = obj3[elem]["projectCount"] + 1;
-            obj3.splice(elem, 1, test);
-          } else {
-            let country = CountryAndState.find((ee) => ee.name === e.Country);
-            let result = State.getStatesOfCountry(country?.isoCode)?.find(
-              (ee) => ee.name === state
-            );
-            let result2 = City.getCitiesOfState(
-              country.isoCode,
-              result.isoCode
-            )?.find((eee) => eee.name === city);
-            let test = {
-              name: result2?.name,
-              Latitude: parseFloat(result2?.latitude),
-              Longitude: parseFloat(result2?.longitude),
-            };
-            test["projectCount"] = 1;
-            obj3.push(test);
-          }
-        });
-        console.log("obj 3 is ", obj3)
-        obj3.map((e, index) => {
-          if (e.projectCount === 1) {
-            let val = finalProjectLocation?.find(
-              (ee) => ee.StateOrRegion?.split(",")[1].trim() === e.name
-            );
-            obj3.splice(index, 1, { ...val });
-          }
-        });
-        setProjects(obj3);
-      } else {
-        setProjects(finalProjectLocation);
-      }
-    }
-  }, [loading, zoom]);
   const GetLocation = () => {
     const map = useMapEvent({
       click(ee) {
+        console.log("clicking map");
+
+        // ee.originalEvent.stopPropagation();
         setmarker({ lat: ee.latlng.lat, lng: ee.latlng.lng });
       },
       zoomend: (e) => {
-        setZoom(map.getZoom());
+        // setZoom(map.getZoom());
       },
     });
 
@@ -271,20 +168,19 @@ const Leafleet2 = () => {
       L.DomEvent.disableClickPropagation(ref2.current);
     });
   };
-  window.onclick = () => {
-    if (setOpenData) {
-      setOpenData(false);
-    }
-  };
+  // window.onclick = (e) => {
+  //   e.stopPropagation()
+  //   if (setOpenData) {
+  //     setOpenData(false);
+  //   }
+  // };
 
   const getAllProjects = async () => {
     try {
       setLoading(true);
       const { data } = await axios.get("/pvfleet/all-project");
       if (data) {
-        console.log("All projects ",data?.result)
         setProjects([...data?.result]);
-        setFinalProjectLocation([...data?.result]);
       }
     } catch (error) {
       console.log("error is ", error.message);
@@ -304,32 +200,42 @@ const Leafleet2 = () => {
     } else {
       try {
         const { data } = await axios.get(
-          `https://api.opencagedata.com/geocode/v1/json?q=${marker.lat}+${marker.lng}
-     &key=99a8119c167543e7976e0fddcdfd9684`
+          `https://nominatim.openstreetmap.org/reverse?lat=${marker.lat}&lon=${marker.lng}&format=json`
         );
-        if (data?.results[0]) {
-          let result = data?.results[0];
-          if (!result?.components?.country) {
-            alert(`Please Select a Valid Location !`);
-            return;
-          }
-          let c = result?.components?.state_district;
-          let city = "";
-          for (let i = 0; i < c?.length; i++) {
-            if (c[i] == " ") break;
-            else city += c[i];
-          }
-
-          setProjectData({
-            ...ProjectData,
-            country: result?.components?.country,
-            state: result?.components?.state,
-            city: city,
-          });
+        if (!data.address?.country) {
+          alert("Please Select a proper location");
+          return;
         }
+        setProjectData({
+          ...ProjectData,
+          country: data?.address?.country,
+          state: data.address?.state ? data?.address?.state : null,
+          city: data.address?.state_district
+            ? data.address?.state_district?.replace(" District", "")
+            : data.address?.region
+            ? data.address?.region?.replace(" District", "")
+            : null,
+        });
+
+        setLocationDetail({
+          ...locationDetail,
+          state: !ProjectData.state ? true : false,
+          city: !ProjectData.city ? true : false,
+        });
+        // if(!data.address?.state)setLocationDetail({...locationDetail,state:true})
+        // if(!data.address?.state_district || data.address?.region)setLocationDetail({...locationDetail,city:true})
+        setOpenForm((v) => !v);
+        // console.log("address is ", data.address);
+        // console.log("country is ", data.address?.country);
+        // console.log("state is ", data.address?.state);
+        // console.log(
+        //   "district is ",
+        //   data.address?.state_district?.replace(" District", "")
+        // );
+        // console.log("region is ", data.address?.region);
       } catch (error) {
-        console.log("Error is ",error.message)
-        alert("Error is ",error.message)
+        console.log("Error is ", error.message);
+        alert("Error is ", error.message);
       }
 
       // .then((result) => result.json())
@@ -347,24 +253,38 @@ const Leafleet2 = () => {
       //   );
       // })
       // .catch((err) => console.log("Error is ", err.message));
-      setOpenForm((v) => !v);
     }
   };
 
+  useMemo(() => {
+    if (projects.length > 0) {
+      let newArr = [];
+
+      projects?.map((e, index) => {
+        let i = newArr.findIndex((ee) => ee.name === e.Country);
+        if (i >= 0) {
+          let obj = newArr[i];
+          obj["count"] = obj["count"] + 1;
+          newArr.splice(i, obj);
+        } else {
+          let obj = {};
+          obj.name = e.Country;
+          obj.count = 1;
+          obj.latitude = e.Latitude;
+          obj.longitude = e.Longitude;
+          newArr.push(obj);
+        }
+      });
+
+      setStoreCountry(newArr);
+    }
+  }, [loading]);
   useEffect(() => {
     getAllProjects();
   }, []);
 
-  console.log("projects is ", projects);
   return (
     <>
-      <div
-        className="select-place-modal"
-        style={{
-          height: projectCountContainer ? "100%" : "0",
-          overflow: projectCountContainer ? "auto" : "hidden",
-        }}
-      ></div>
       <div
         className="form-modal"
         style={{
@@ -402,13 +322,19 @@ const Leafleet2 = () => {
             <div>
               <label htmlFor="state">State: </label>
               <input
+                placeholder="Optional"
                 type="text"
                 id="state"
                 value={ProjectData.state || ""}
-                // onChange={(e) =>
-                //   setProjectData({ ...ProjectData, userName: e.target.value })
-                // }
-                readOnly
+                onChange={(e) =>
+                  locationDetail.state
+                    ? setProjectData({
+                        ...ProjectData,
+                        state: e.target.value,
+                      })
+                    : null
+                }
+                readOnly={locationDetail.state ? false : true}
               ></input>
             </div>
 
@@ -416,14 +342,16 @@ const Leafleet2 = () => {
               <label htmlFor="city">City/Region: </label>
 
               <input
+                placeholder="Optional"
                 type="text"
                 id="city"
                 value={ProjectData.city || ""}
-                //   onChange={(e) =>
-                //     setProjectData({ ...ProjectData, city: e.target.value })
-                //   }
-                //   required
-                readOnly
+                onChange={(e) =>
+                  locationDetail.city
+                    ? setProjectData({ ...ProjectData, city: e.target.value })
+                    : null
+                }
+                readOnly={locationDetail.city ? false : true}
               />
             </div>
             <div>
@@ -464,7 +392,7 @@ const Leafleet2 = () => {
                     padding: "1vmin",
                     fontSize: "1.5vmin",
                     border: "none",
-                    borderLeft: " 1.5px solid rgba(204, 204, 204, 1)",
+                    borderLeft: " 2px solid rgba(204, 204, 204, 1)",
                     // borderTop: " 1.5px solid rgba(204, 204, 204, 1)",
                     // border:"1px solid red",
                   }}
@@ -694,7 +622,7 @@ const Leafleet2 = () => {
                     padding: "1vmin",
                     fontSize: "1.5vmin",
                     border: "none",
-                    borderRight: " 1.5px solid rgba(204, 204, 204, 1)",
+                    borderRight: " 2px solid rgba(204, 204, 204, 1)",
                     // borderTop: " 1.5px solid rgba(204, 204, 204, 1)",
                     // border:"1px solid red",
                   }}
@@ -721,7 +649,11 @@ const Leafleet2 = () => {
             </div>
             <div>
               {/* <div><span>Please Wait </span><span>&nbsp;.</span><span>&nbsp;.</span><span>&nbsp;.</span></div> */}
-              <input type="submit" value="Submit" />
+              <input
+                style={{ color: loadingRegister ? "white" : "black" }}
+                type="submit"
+                value={loadingRegister ? "Loading..." : "Submit"}
+              />
             </div>
           </form>
         </div>
@@ -808,8 +740,24 @@ const Leafleet2 = () => {
               </div>
             </div>
             <div>
-              <button onClick={() => submitHandler()}>
-                Fill Your Project Detail Here
+              <button
+                style={
+                  {
+                    // transform:selectedMarker?"translate(90deg)":"none"
+                  }
+                }
+                onClick={() => (marker ? submitHandler() : null)}
+                onMouseOver={() => {
+                  if (!marker) setSelectedMarker(true);
+                }}
+                onMouseOut={() => setSelectedMarker(false)}
+              >
+                <span>
+                  {" "}
+                  {selectedMarker
+                    ? "Please Mark a Location"
+                    : "Fill Your Project Detail Here"}
+                </span>
               </button>
             </div>
           </div>
@@ -839,42 +787,19 @@ const Leafleet2 = () => {
               cursor: "default",
             }}
             worldCopyJump={true}
-            whenReady={(e) => {
-              console.log("map is ready ", e.target);
-              
-              // L.Util.setOptions(null, {
-              //   style: { fillOpacity: 0 },
-              // });
-            }}
-
-            // doubleClickZoom={false}
-            // dragging={false}
+            whenReady={(e) => {}}
           >
-            {/* <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          noWrap={true}
-        /> */}
-        {/* L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-    }).addTo(map); */}
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              // url='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
               url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-              // url="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              // url="https://stamen-tiles-{s}.a.ssl.fastly.net/{style}/{z}/{x}/{y}.{ext}"
-              // url="https://{s}.basemaps.cartocdn.com/{'light_all'}/{z}/{x}/{y}{r}.{ext}"
-              // url="https://{s}.tile.thunderforest.com/light_all/{z}/{x}/{y}.png"
-              // noWrap={true}
             />
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                zIndex: -1,
               }}
+              onClick={()=>console.log("heading div")}
             >
               <h2
                 style={{
@@ -890,6 +815,62 @@ const Leafleet2 = () => {
                 !! Welcome TO pvFLEET Performance Dashboard !!{" "}
               </h2>
             </div>
+            <i
+              style={{
+                position: "absolute",
+                top: "1vmin",
+                right: "1.5vmin",
+                zIndex: 1111,
+                color: "black",
+                fontWeight: 800,
+                opacity: 0.8,
+                cursor: "pointer",
+                fontSize: "4vmin",
+              }}
+              className="fa-solid fa-bars"
+              onClick={(e) => {
+                console.log("clicking country open bar");
+                e.stopPropagation();
+                setOpenCountryDetail((v) => !v);
+              }}
+            ></i>
+
+            <div
+              className="country-detail"
+              style={{
+                width: openCountryDetail ? "35vmin" : "0",
+              }}
+            >
+              <div
+                onClick={(e) => {
+                  setOpenCountryDetail((v) => !v);
+                  console.log("closing country detail container");
+                }}
+              >
+                Close
+              </div>
+              <div>
+                <span>Country Name</span>
+                <span>Projects</span>
+              </div>
+              {storeCountry?.map((e, index) => {
+                return (
+                  <div onClick={()=>
+                    ref.current.flyTo(
+                      { lat: e.latitude, lng:e.longitude },
+                      ref.current.getZoom(),
+                      {
+                        animate: true,
+                        duration: 0.5,
+                      }
+                    )
+                  } >
+                    <span>{e.name}</span>
+                    <span>{e.count}</span>
+                  </div>
+                );
+              })}
+            </div>
 
             <div
               className="detail-container-1"
@@ -901,14 +882,15 @@ const Leafleet2 = () => {
                 // display:openData?"flex":"none"
               }}
               onClick={(e) => {
-                e.stopPropagation();
+                console.log("detail-container");
               }}
               ref={ref2}
             >
               <i
                 onClick={(e) => {
-                  setOpenData(false);
+                  console.log("close detail-container");
                   e.stopPropagation();
+                  setOpenData(false);
                 }}
                 className="fa-solid fa-xmark x-mark"
               ></i>
@@ -920,7 +902,7 @@ const Leafleet2 = () => {
                   <p>Project Location </p>
                   <span>
                     {openProjectData?.Country +
-                      ", " +
+                      +"" +
                       openProjectData?.StateOrRegion}
                   </span>
                 </div>
@@ -928,7 +910,7 @@ const Leafleet2 = () => {
                   <p>Project Capacity</p>
                   <span>
                     {openProjectData?.ProjectCapacity +
-                      `(${openProjectData?.CapacityUnit})`}
+                      ` ${openProjectData?.CapacityUnit}`}
                   </span>
                 </div>
                 <div>
@@ -952,7 +934,7 @@ const Leafleet2 = () => {
                   <p>Tilt Angle</p>
                   <span>
                     {openProjectData?.TiltAngle}
-                    {"(Deg)"}
+                    {" Deg"}
                   </span>
                 </div>
                 <div>
@@ -970,6 +952,7 @@ const Leafleet2 = () => {
             </div>
             {marker && (
               <Marker
+                icon={DefaultIcon}
                 draggable={true}
                 position={[marker.lat, marker.lng]}
                 eventHandlers={{
@@ -979,68 +962,84 @@ const Leafleet2 = () => {
                 }}
               ></Marker>
             )}
+            <MarkerClusterGroup
+              // style={{
+              //   background: "#9370db",
+              //   border: "3px solid  #ededed",
+              //   borderRadius: "50%",
+              //   color: "black",
+              //   height: "40px",
+              //   lineHeight: "37px",
+              //   textAlign: "center",
+              //   width: "40px"
+              // }}
+              onclick={(e) => {
+                e.originalEvent.stopPropagation();
 
-            {projects?.map((e, index) => {
-              let DefaultIcon = L.divIcon({
-                className: "defaultIcon",
-                html: `
-              <img src=${img7}  id=defaultIconImg />
-              <span id=defaultIconImgSpan >${
-                e?.projectCount > 1 ? e?.projectCount : ""
-              }</span>
-              `,
-                // iconSize: [25, 25],
-                iconAnchor: [20, 10],
-              });
-              return (
-                <>
+                if (ref.current.getZoom() <= 12) {
+                  ref.current.flyTo(
+                    { lat: e.latlng.lat, lng: e?.latlng.lng },
+                    ref.current.getZoom() + 1.5,
+                    {
+                      animate: true,
+                      duration: 0.5,
+                    }
+                  );
+                }
+              }}
+              eventHandlers={{
+                click: (c) => {
+                  c.originalEvent.stopPropagation();
+
+                  let find = projects?.find(
+                    (f) =>
+                      f.Latitude == c.latlng.lat && f.Longitude == c.latlng.lng
+                  );
+                  if (find) {
+                    ref.current.flyTo(
+                      { lat: c?.latlng.lat, lng: c?.latlng.lng },
+                      ref.current.getZoom(),
+                      {
+                        animate: true,
+                        duration: 0.5,
+                      }
+                    );
+                    setOpenProjectData(find);
+                    setOpenData(true);
+                  }
+                },
+                // overlayadd: (e) => console.log("over lay add ", e),
+                // overlayremove: (e) => console.log("overlayer remove", e),
+              }}
+              onClusterClick={(cluster) => {
+                // console.log(cluster);
+                // console.warn(
+                //   "cluster-click",
+                //   cluster,
+                //   cluster.layer.getAllChildMarkers()
+                // );
+              }}
+            >
+              {projects?.map((eee, index) => {
+                let DefaultIcon = L.divIcon({
+                  className: "defaultIcon",
+                  html: `
+                    <img src=${img7}  id=defaultIconImg />
+                     <span id=defaultIconImgSpan ></span>
+                            `,
+                  // iconSize: [25, 25],
+                  // iconAnchor: [20, 20],
+                });
+                return (
                   <Marker
-                    icon={DefaultIcon}
+                    data={eee}
                     key={index}
-                    position={[e?.Latitude, e?.Longitude]}
-                    eventHandlers={{
-                      click: (ee) => {
-                        ee.originalEvent.stopPropagation();
-                        if (ref.current.getZoom() <= 12 && e?.projectCount) {
-                          ref.current.flyTo(
-                            { lat: e?.Latitude, lng: e?.Longitude },
-                            ref.current.getZoom() + 2,
-                            {
-                              animate: true,
-                              duration: 0.5,
-                            }
-                          );
-                        }
-                        if (ref.current.getZoom() >= 12) {
-                          ref.current.flyTo(
-                            { lat: e?.Latitude, lng: e?.Longitude },
-                            ref.current.getZoom(),
-                            {
-                              animate: true,
-                              duration: 0.5,
-                            }
-                          );
-                          setOpenProjectData(e);
-                          setOpenData(true);
-                        }
-                        if (!e.projectCount) {
-                          ref.current.flyTo(
-                            { lat: e?.Latitude, lng: e?.Longitude },
-                            ref.current.getZoom(),
-                            {
-                              animate: true,
-                              duration: 0.5,
-                            }
-                          );
-                          setOpenData(true);
-                          setOpenProjectData(e);
-                        }
-                      },
-                    }}
-                  ></Marker>
-                </>
-              );
-            })}
+                    icon={DefaultIcon}
+                    position={[eee?.Latitude, eee?.Longitude]}
+                  />
+                );
+              })}
+            </MarkerClusterGroup>
 
             <GetLocation />
           </MapContainer>
@@ -1050,7 +1049,7 @@ const Leafleet2 = () => {
   );
 };
 
-export default Leafleet2;
+export default LeafleetFinal;
 
 // "Ganjam"
 // latitude

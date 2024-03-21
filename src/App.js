@@ -1,24 +1,33 @@
 import logo from "./logo.svg";
 import "./App.css";
-import MyComponent2 from "./mapComponent/MyComponent2";
-import Leafleet from "./mapComponent/Leafleet";
-import MyComponent2cpy from "./mapComponent/MyComponent2cpy";
-import Leafleet2 from "./mapComponent/Leafleet2";
+// import MyComponent2 from "./mapComponent/MyComponent2";
+// import Leafleet from "./mapComponent/Leafleet";
+// import MyComponent2cpy from "./mapComponent/MyComponent2cpy";
+// import Leafleet2 from "./mapComponent/Leafleet2";
+// import Leafleet3 from "./mapComponent/Leafleet3";
+// import Leafleet4 from "./mapComponent/Leafleet4";
+import LeafleetFinal from "./mapComponent/LeafleetFinal";
 
 function App() {
   return (
     <>
       <div className="app">
         {/* <MyComponent2 /> */}
-        <MyComponent2cpy />
+        {/* <MyComponent2cpy /> */}
         {/* <Leafleet/> */}
-        {/* <Leafleet2/> */}
+        {/* <Leafleet2 /> */}
+        {/* <Leafleet3 /> */}
+        {/* <Leafleet4 /> */}
+        <LeafleetFinal/>
       </div>
     </>
   );
 }
 
 export default App;
+
+// position={["18.11243720", "79.01929970"]}
+// position={[49.6478, 73.5229]}
 
 // const geocoder = new window.google.maps.Geocoder();
 // const location = {
